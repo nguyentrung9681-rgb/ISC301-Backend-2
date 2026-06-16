@@ -1,0 +1,6 @@
+package com.example.ecommerce_backend.Entity;
+
+public enum AccountStatus {
+    ACTIVE,
+    BANNED
+}
