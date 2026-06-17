@@ -1,0 +1,112 @@
+package com.example.ecommerce_backend.Service;
+
+import com.example.ecommerce_backend.Entity.*;
+import com.example.ecommerce_backend.Repository.CartItemRepository;
+import com.example.ecommerce_backend.Repository.OrderRepository;
+import com.example.ecommerce_backend.Repository.ProductRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class OrderService {
+    @Autowired
+    private OrderRepository orderRepository;
+    @Autowired
+    private CartItemRepository cartItemRepository;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private PaymentService paymentService;
+
+    @Transactional
+    public Order createOrder(User user, String address, String phone, String paymentMethod) {
+        List<CartItem> cartItems = cartItemRepository.findByUserIdAndWishlist(user.getId(), false);
+        if (cartItems.isEmpty()) throw new RuntimeException("Giỏ hàng của bạn đang trống!");
+
+        Order order = new Order();
+        order.setUser(user);
+        order.setOrderDate(LocalDateTime.now());
+        order.setShippingAddress(address);
+        order.setPhoneNumber(phone);
+        order.setPaymentMethod(paymentMethod);
+        order.setStatus("PENDING"); // Trạng thái khởi tạo mặc định
+
+        List<OrderItem> orderItems = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        for (CartItem cart : cartItems) {
+            Product product = cart.getProduct();
+            // Kiểm tra kho vật lý
+            if (product.getStockQuantity() < cart.getQuantity()) {
+                throw new RuntimeException("Sản phẩm '" + product.getProductName() + "' không đủ số lượng trong kho!");
+            }
+            // Trừ số lượng kho vật lý
+            product.setStockQuantity(product.getStockQuantity() - cart.getQuantity());
+            productRepository.save(product);
+
+            OrderItem item = new OrderItem(null, order, product, cart.getQuantity(), product.getPrice());
+            orderItems.add(item);
+            totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity())));
+        }
+
+        order.setTotalAmount(totalAmount);
+        order.setOrderItems(orderItems);
+
+        Order savedOrder = orderRepository.save(order);
+        paymentService.createPayment(savedOrder);
+        // Xóa sạch giỏ hàng sau khi checkout thành công
+        cartItemRepository.deleteByUserIdAndIsWishlist(user.getId(), false);
+        return savedOrder;
+    }
+
+    @Transactional
+    public Order cancelOrder(Long orderId, User user, boolean isManager) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Đơn hàng không tồn tại"));
+
+        // Nếu là khách hàng, chỉ được phép hủy khi đơn ở trạng thái PENDING
+        if (!isManager && !order.getStatus().equals("PENDING")) {
+            throw new RuntimeException("Bạn chỉ có thể hủy đơn hàng khi trạng thái là PENDING!");
+        }
+
+        if (order.getStatus().equals("CANCELLED") || order.getStatus().equals("DELIVERED")) {
+            throw new RuntimeException("Không thể hủy đơn hàng đã hoàn thành hoặc đã hủy trước đó.");
+        }
+
+        // Thực hiện Stock Rollback - Hoàn trả số lượng về kho hàng
+        for (OrderItem item : order.getOrderItems()) {
+            Product product = item.getProduct();
+            product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+            productRepository.save(product);
+        }
+
+        order.setStatus("CANCELLED");
+        Order cancelledOrder = orderRepository.save(order);
+        // Cập nhật trạng thái thanh toán sang REFUNDED khi đơn bị hủy
+        paymentService.refundPayment(orderId);
+        return cancelledOrder;
+    }
+
+    // 3. Manager cập nhật trạng thái đơn hàng (PENDING => SHIPPING => DELIVERED)
+    public Order updateOrderStatus(Long orderId, String newStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Đơn hàng không tồn tại"));
+
+        if (order.getStatus().equals("CANCELLED")) {
+            throw new RuntimeException("Không thể cập nhật trạng thái cho đơn hàng đã hủy!");
+        }
+
+        order.setStatus(newStatus.toUpperCase());
+        return orderRepository.save(order);
+    }
+
+    // 4. Xem danh sách đơn hàng
+    public List<Order> getAllOrders() { return orderRepository.findAll(); }
+    public List<Order> getClientOrderHistory(Long userId) { return orderRepository.findByUserIdOrderByOrderDateDesc(userId); }
+}
