@@ -4,6 +4,7 @@ import com.example.ecommerce_backend.Entity.*;
 import com.example.ecommerce_backend.Service.CartService;
 import com.example.ecommerce_backend.Service.OrderService;
 import com.example.ecommerce_backend.Service.PaymentService;
+import com.example.ecommerce_backend.Service.VoucherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,8 @@ public class ClientEcommerceControll {
     private OrderService orderService;
     @Autowired
     private PaymentService paymentService;
+    @Autowired
+    private VoucherService voucherService;
 
     private User getMockUser() {
         return new User(1L, "khachhang@gmail.com", "", "Nguyen Van A", "0987654321", "Ha Noi", Role.BUYER, ACTIVE);
@@ -98,4 +101,20 @@ public class ClientEcommerceControll {
         return ResponseEntity.ok().body("{\"checkoutUrl\": \"" + checkoutUrl + "\"}");
     }
 
+    //VOUCHER
+    // GET /api/client/voucher/validate?code=XYZ -> Kiểm tra mã giảm giá
+    @GetMapping("/voucher/validate")
+    public ResponseEntity<Voucher> checkVoucher(@RequestParam String code) {
+        return ResponseEntity.ok(voucherService.validateVoucher(code));
+    }
+
+    // POST /api/client/order/checkout-with-voucher -> Checkout kèm voucher
+    @PostMapping("/order/checkout-with-voucher")
+    public ResponseEntity<Order> checkoutWithVoucher(
+            @RequestParam String address,
+            @RequestParam String phone,
+            @RequestParam String paymentMethod,
+            @RequestParam String voucherCode) {
+        return ResponseEntity.ok(orderService.createOrderWithVoucher(getMockUser(), address, phone, paymentMethod, voucherCode));
+    }
 }

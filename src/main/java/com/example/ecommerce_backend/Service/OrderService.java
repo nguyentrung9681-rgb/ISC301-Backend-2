@@ -4,6 +4,7 @@ import com.example.ecommerce_backend.Entity.*;
 import com.example.ecommerce_backend.Repository.CartItemRepository;
 import com.example.ecommerce_backend.Repository.OrderRepository;
 import com.example.ecommerce_backend.Repository.ProductRepository;
+import com.example.ecommerce_backend.Repository.VoucherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,16 @@ public class OrderService {
     private ProductRepository productRepository;
     @Autowired
     private PaymentService paymentService;
+    @Autowired
+    private VoucherRepository voucherRepository;
+    @Autowired
+    private VoucherService voucherService;
 
     @Transactional
     public Order createOrder(User user, String address, String phone, String paymentMethod) {
         List<CartItem> cartItems = cartItemRepository.findByUserIdAndWishlist(user.getId(), false);
-        if (cartItems.isEmpty()) throw new RuntimeException("Giỏ hàng của bạn đang trống!");
+        if (cartItems.isEmpty())
+            throw new RuntimeException("Giỏ hàng của bạn đang trống!");
 
         Order order = new Order();
         order.setUser(user);
@@ -101,12 +107,74 @@ public class OrderService {
         if (order.getStatus().equals("CANCELLED")) {
             throw new RuntimeException("Không thể cập nhật trạng thái cho đơn hàng đã hủy!");
         }
-
         order.setStatus(newStatus.toUpperCase());
         return orderRepository.save(order);
     }
 
     // 4. Xem danh sách đơn hàng
-    public List<Order> getAllOrders() { return orderRepository.findAll(); }
-    public List<Order> getClientOrderHistory(Long userId) { return orderRepository.findByUserIdOrderByOrderDateDesc(userId); }
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    public List<Order> getClientOrderHistory(Long userId) {
+        return orderRepository.findByUserIdOrderByOrderDateDesc(userId);
+    }
+
+    // VOUCHER
+    @Transactional
+    public Order createOrderWithVoucher(User user, String address, String phone, String paymentMethod,
+            String voucherCode) {
+        // 1. Kiểm tra và lấy thông tin Voucher hợp lệ (tái dùng logic trong
+        // VoucherService)
+        Voucher voucher = voucherService.validateVoucher(voucherCode);
+
+        // 2. Gom sản phẩm từ giỏ hàng (tương tự hàm checkout cũ)
+        List<CartItem> cartItems = cartItemRepository.findByUserIdAndWishlist(user.getId(), false);
+        if (cartItems.isEmpty())
+            throw new RuntimeException("Giỏ hàng rỗng!");
+
+        Order order = new Order();
+        order.setUser(user);
+        order.setOrderDate(LocalDateTime.now());
+        order.setShippingAddress(address);
+        order.setPhoneNumber(phone);
+        order.setPaymentMethod(paymentMethod);
+        order.setStatus("PENDING"); //
+
+        List<OrderItem> orderItems = new ArrayList<>();
+        BigDecimal subTotal = BigDecimal.ZERO;
+
+        for (CartItem cart : cartItems) {
+            Product product = cart.getProduct();
+            if (product.getStockQuantity() < cart.getQuantity()) { //
+                throw new RuntimeException("Sản phẩm '" + product.getProductName() + "' không đủ hàng trong kho!");
+            }
+            product.setStockQuantity(product.getStockQuantity() - cart.getQuantity());
+            productRepository.save(product);
+
+            OrderItem item = new OrderItem(null, order, product, cart.getQuantity(), product.getPrice());
+            orderItems.add(item);
+            subTotal = subTotal.add(product.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity())));
+        }
+
+        // 3. Tính toán số tiền sau giảm giá
+        BigDecimal discountRate = BigDecimal.valueOf(voucher.getDiscountPercent()).divide(BigDecimal.valueOf(100));
+        BigDecimal discountAmount = subTotal.multiply(discountRate);
+        BigDecimal finalAmount = subTotal.subtract(discountAmount);
+        if (finalAmount.compareTo(BigDecimal.ZERO) < 0)
+            finalAmount = BigDecimal.ZERO;
+
+        order.setTotalAmount(finalAmount);
+        order.setOrderItems(orderItems);
+
+        // 4. Tăng số lượt đã sử dụng của voucher
+        voucher.setUsedCount(voucher.getUsedCount() + 1);
+        voucherRepository.save(voucher);
+
+        Order savedOrder = orderRepository.save(order);
+        paymentService.createPayment(savedOrder); // Tự động tạo bản ghi thanh toán kèm theo
+
+        cartItemRepository.deleteByUserIdAndIsWishlist(user.getId(), false);
+        return savedOrder;
+    }
 }
