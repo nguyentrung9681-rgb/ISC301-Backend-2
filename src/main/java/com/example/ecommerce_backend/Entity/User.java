@@ -1,5 +1,6 @@
 package com.example.ecommerce_backend.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -13,6 +14,7 @@ public class User {
     @Column(name = "email", length = 150, unique = true, nullable = false)
     private String email;
 
+    @JsonIgnore
     @Column(name = "password", length = 255, nullable = false)
     private String password;
 

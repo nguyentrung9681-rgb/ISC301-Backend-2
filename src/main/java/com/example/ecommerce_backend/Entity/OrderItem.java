@@ -1,5 +1,6 @@
 package com.example.ecommerce_backend.Entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,7 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
@@ -26,5 +28,7 @@ public class OrderItem {
     private Product product;
 
     private int quantity;
+
+    @Column(name = "price_at_purchase", nullable = false)
     private BigDecimal price;
 }
