@@ -1,4 +1,4 @@
-package com.example.ecommerce_backend.Config;
+package com.example.ecommerce_backend.config;
 
 import com.example.ecommerce_backend.Interceptor.RoleInterceptor; // Thêm import này
 import org.springframework.context.annotation.Configuration;
