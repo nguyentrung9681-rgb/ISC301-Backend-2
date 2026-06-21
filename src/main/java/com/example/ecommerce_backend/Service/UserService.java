@@ -2,16 +2,13 @@ package com.example.ecommerce_backend.Service;
 
 import com.example.ecommerce_backend.Entity.PasswordResetToken;
 import com.example.ecommerce_backend.Repository.PasswordResetTokenRepository;
-import com.example.ecommerce_backend.dto.UserResponseDTO;
+import com.example.ecommerce_backend.dto.*;
 import com.example.ecommerce_backend.Entity.AccountStatus;
 import com.example.ecommerce_backend.Entity.Role;
 import com.example.ecommerce_backend.Entity.User;
 import com.example.ecommerce_backend.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import com.example.ecommerce_backend.dto.RegisterRequestDTO;
-import com.example.ecommerce_backend.dto.LoginRequestDTO;
-import com.example.ecommerce_backend.dto.UpdateProfileRequestDTO;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -198,5 +195,41 @@ public class UserService {
         User updatedUser = userRepository.save(user);
 
         return new UserResponseDTO(updatedUser);
+    }
+
+    @Transactional
+    public UserResponseDTO registerManager(RegisterManagerRequestDTO request) {
+        // 1. Kiểm tra dữ liệu bắt buộc không được để trống
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new RuntimeException("Email không được để trống");
+        }
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new RuntimeException("Mật khẩu không được để trống");
+        }
+
+        // 2. Kiểm tra xem Email đăng ký đã tồn tại trong hệ thống hay chưa
+        if (userRepository.findByEmail(request.getEmail().trim()).isPresent()) {
+            throw new RuntimeException("Email này đã được đăng ký trên hệ thống!");
+        }
+
+        // 3. Khởi tạo đối tượng User mới và điền thông tin
+        User newManager = new User();
+        newManager.setEmail(request.getEmail().trim());
+
+        // Mã hóa bảo mật mật khẩu bằng BCrypt
+        String hashedPassword = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
+        newManager.setPassword(hashedPassword);
+
+        newManager.setFullName(request.getFullName());
+        newManager.setPhone(request.getPhone());
+        newManager.setAddress(request.getAddress() != null ? request.getAddress().trim() : "Văn phòng JustLife");
+
+        // Thiết lập vai trò (role) cố định là MANAGER và trạng thái hoạt động
+        newManager.setRole(Role.MANAGER);
+        newManager.setAccountStatus(AccountStatus.ACTIVE);
+
+        // 4. Lưu xuống cơ sở dữ liệu và trả về DTO
+        User savedUser = userRepository.save(newManager);
+        return new UserResponseDTO(savedUser);
     }
 }
