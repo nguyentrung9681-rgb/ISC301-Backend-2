@@ -1,10 +1,9 @@
 package com.example.ecommerce_backend.Controller;
 
 import com.example.ecommerce_backend.Service.UserService;
-import com.example.ecommerce_backend.dto.RegisterRequestDTO;
-import com.example.ecommerce_backend.dto.UserResponseDTO;
+import com.example.ecommerce_backend.dto.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.example.ecommerce_backend.dto.LoginRequestDTO;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -38,5 +37,26 @@ public class AuthController {
         // Vì hiện tại hệ thống là Stateless (hoặc xử lý lưu Token/Session ở Client)
         // Phía FE chỉ cần xóa dữ liệu User/Token trong localStorage/sessionStorage khi gọi API này.
         return "Đăng xuất thành công";
+    }
+    //3.API quen mat khau
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequestDTO request) {
+        try {
+            userService.generatePasswordResetToken(request.getEmail());
+            return ResponseEntity.ok().body("{\"message\": \"Hệ thống đã gửi một liên kết đặt lại mật khẩu tới email của bạn. Vui lòng kiểm tra hòm thư!\"}");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
+    }
+
+    // API 4: Thực hiện đổi và cập nhật lại Mật khẩu mới
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDTO request) {
+        try {
+            userService.resetPassword(request.getToken(), request.getNewPassword());
+            return ResponseEntity.ok().body("{\"message\": \"Mật khẩu của bạn đã được thay đổi và cập nhật thành công!\"}");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
     }
 }

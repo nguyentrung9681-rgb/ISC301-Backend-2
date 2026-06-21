@@ -18,6 +18,10 @@ import java.util.List;
 public class PaymentService {
     @Autowired
     private PaymentRepository paymentRepository;
+    @Autowired
+    private QRCodeService qrCodeService;
+    @Autowired
+    private EmailService emailService;
 
     @Autowired
     private PayOS payOS;
@@ -39,15 +43,22 @@ public class PaymentService {
     }
 
     // Xác nhận thanh toán thành công -> chuyển sang PAID
+    @Transactional
     public Payment confirmPayment(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin thanh toán"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin giao dịch thanh toán!"));
+
         if ("PAID".equals(payment.getStatus())) {
-            throw new RuntimeException("Giao dịch này đã được thanh toán");
+            throw new RuntimeException("Giao dịch này đã được thanh toán trước đó.");
         }
+
         payment.setStatus("PAID");
-        payment.setUpdatedAt(LocalDateTime.now()); // Ghi nhận thời điểm xác nhận
-        return paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+
+        // 🔥 KÍCH HOẠT TỰ ĐỘNG GỬI BILL KÈM QR
+        triggerOrderInvoiceEmail(savedPayment.getOrder());
+
+        return savedPayment;
     }
 
     // Hoàn tiền khi đơn hàng bị hủy -> chuyển sang REFUNDED
@@ -107,8 +118,34 @@ public class PaymentService {
     public void updateStatusByPayOSCode(Long payosOrderCode, String status) {
         Payment payment = paymentRepository.findByPayosOrderCode(payosOrderCode)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy mã đơn giao dịch PayOS đối chiếu!"));
-        payment.setStatus(status.toUpperCase());
-        paymentRepository.save(payment);
+
+        if (!"PAID".equals(payment.getStatus()) && "PAID".equalsIgnoreCase(status)) {
+            payment.setStatus("PAID");
+            Payment savedPayment = paymentRepository.save(payment);
+
+            // 🔥 KÍCH HOẠT TỰ ĐỘNG GỬI BILL KÈM QR
+            triggerOrderInvoiceEmail(savedPayment.getOrder());
+        }
+    }
+
+    // Hàm MOI: nội bộ giúp sinh mã QR và bắn Mail (Tránh viết lặp code)
+    private void triggerOrderInvoiceEmail(Order order) {
+        try {
+            // Chuỗi text mã hóa vào QR (Ví dụ: Dẫn đến link tra cứu hoặc thông tin nhanh của đơn)
+            String qrData = "JustLife-Order-ID: " + order.getId()
+                    + " | Customer: " + order.getUser().getFullName()
+                    + " | Total: " + order.getTotalAmount() + " VND";
+
+            // Tạo ảnh QR kích thước 200x200 px
+            byte[] qrImage = qrCodeService.generateQRCodeImage(qrData, 200, 200);
+
+            // Gửi email hóa đơn trực tiếp cho khách hàng
+            emailService.sendOrderConfirmationEmail(order.getUser().getEmail(), order, qrImage);
+        } catch (Exception e) {
+            // Log warning or print stack trace instead of rolling back the entire transaction!
+            System.err.println("Lỗi khi gửi email hóa đơn cho đơn hàng #" + order.getId() + ": " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
 }

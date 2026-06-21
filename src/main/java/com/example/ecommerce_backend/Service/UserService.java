@@ -1,17 +1,23 @@
 package com.example.ecommerce_backend.Service;
 
+import com.example.ecommerce_backend.Entity.PasswordResetToken;
+import com.example.ecommerce_backend.Repository.PasswordResetTokenRepository;
 import com.example.ecommerce_backend.dto.UserResponseDTO;
 import com.example.ecommerce_backend.Entity.AccountStatus;
 import com.example.ecommerce_backend.Entity.Role;
 import com.example.ecommerce_backend.Entity.User;
 import com.example.ecommerce_backend.Repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.example.ecommerce_backend.dto.RegisterRequestDTO;
 import com.example.ecommerce_backend.dto.LoginRequestDTO;
 import com.example.ecommerce_backend.dto.UpdateProfileRequestDTO;
 import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
+
 @Service
 public class UserService {
     private final UserRepository userRepository;
@@ -19,6 +25,60 @@ public class UserService {
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
+    @Autowired
+    private PasswordResetTokenRepository tokenRepository;
+    @Autowired
+    private EmailService emailService;
+
+    // 1. Logic xử lý khi nhận yêu cầu Quên mật khẩu
+    @Transactional
+    public void generatePasswordResetToken(String email) {
+        // Tìm xem email có tồn tại trên hệ thống hay không
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản nào liên kết với Email này!"));
+
+        // Dọn dẹp dứt điểm các mã token cũ của user này trước đó để tránh xung đột
+        tokenRepository.deleteByUserId(user.getId());
+
+        // Sinh ra chuỗi Token ngẫu nhiên (UUID bí mật)
+        String token = UUID.randomUUID().toString();
+
+        // Lưu bản ghi token mới vào DB
+        PasswordResetToken resetToken = new PasswordResetToken(token, user);
+        tokenRepository.save(resetToken);
+
+        // Định hình đường link dẫn tới giao diện đổi mật khẩu của Frontend (Cổng localhost:3000)
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+
+        // Tiến hành kích hoạt bắn email ngầm về hòm thư người dùng
+        emailService.sendResetPasswordEmail(user.getEmail(), resetLink);
+    }
+
+    // 2. Logic xử lý khi khách hàng submit Mật khẩu mới kèm chuỗi mã xác thực Token
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        // Truy vấn tìm kiếm mã token gửi lên
+        PasswordResetToken resetToken = tokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Mã xác thực Token không hợp lệ hoặc không tồn tại!"));
+
+        // Kiểm tra xem thời gian Token đã bị quá hạn 15 phút chưa
+        if (resetToken.isExpired()) {
+            tokenRepository.delete(resetToken); // Xóa token quá hạn khỏi DB
+            throw new RuntimeException("Đường liên kết khôi phục mật khẩu này đã hết hạn sử dụng!");
+        }
+
+        // Lấy thông tin User sở hữu token
+        User user = resetToken.getUser();
+
+        // Tiến hành mã hóa bảo mật mật khẩu mới bằng lớp tiện ích BCrypt
+        String hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+        user.setPassword(hashedPassword);
+        userRepository.save(user);
+
+        // Hủy bỏ / Xóa sạch token này ra khỏi database sau khi đổi thành công để tránh việc tái sử dụng lại
+        tokenRepository.delete(resetToken);
+    }
+
 
     public UserResponseDTO updateUserProfile(Long id, UpdateProfileRequestDTO request) {
         // 1. Kiểm tra User có tồn tại không
