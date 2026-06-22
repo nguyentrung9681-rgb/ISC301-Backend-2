@@ -1,4 +1,4 @@
-package com.example.ecommerce_backend.config;
+package com.example.ecommerce_backend.Config;
 
 import com.example.ecommerce_backend.dto.ApiResponse;
 import org.springframework.http.HttpStatus;

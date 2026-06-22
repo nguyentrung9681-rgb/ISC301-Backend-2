@@ -1,4 +1,4 @@
-package com.example.ecommerce_backend.config;
+package com.example.ecommerce_backend.Config;
 
 import vn.payos.PayOS;
 import org.springframework.beans.factory.annotation.Value;
