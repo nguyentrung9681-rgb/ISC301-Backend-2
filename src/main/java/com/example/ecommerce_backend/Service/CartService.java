@@ -19,7 +19,7 @@ public class CartService {
     private ProductRepository productRepository;
 
     public List<CartItem> getItems(User user, boolean isWishlist) {
-        return cartItemRepository.findByUserIdAndWishlist(user.getId(), isWishlist);
+        return cartItemRepository.findByUserIdAndIsWishlist(user.getId(), isWishlist);
     }
 
     public CartItem addItem(User user, Long productId, int quantity, boolean isWishlist) {

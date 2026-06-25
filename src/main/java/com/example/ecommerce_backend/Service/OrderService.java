@@ -33,7 +33,7 @@ public class OrderService {
 
     @Transactional
     public Order createOrder(User user, String address, String phone, String paymentMethod) {
-        List<CartItem> cartItems = cartItemRepository.findByUserIdAndWishlist(user.getId(), false);
+        List<CartItem> cartItems = cartItemRepository.findByUserIdAndIsWishlist(user.getId(), false);
         if (cartItems.isEmpty())
             throw new RuntimeException("Giỏ hàng của bạn đang trống!");
 
@@ -161,7 +161,7 @@ public class OrderService {
         Voucher voucher = voucherService.validateVoucher(voucherCode);
 
         // 2. Gom sản phẩm từ giỏ hàng (tương tự hàm checkout cũ)
-        List<CartItem> cartItems = cartItemRepository.findByUserIdAndWishlist(user.getId(), false);
+        List<CartItem> cartItems = cartItemRepository.findByUserIdAndIsWishlist(user.getId(), false);
         if (cartItems.isEmpty())
             throw new RuntimeException("Giỏ hàng rỗng!");
 

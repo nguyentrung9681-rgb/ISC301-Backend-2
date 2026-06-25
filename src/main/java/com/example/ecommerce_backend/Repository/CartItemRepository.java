@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
-    List<CartItem> findByUserIdAndWishlist(Long userId, boolean isWishlist);
+    List<CartItem> findByUserIdAndIsWishlist(Long userId, boolean isWishlist);
     Optional<CartItem> findByUserIdAndProductIdAndIsWishlist(Long userId, Long productId, boolean isWishlist);
     void deleteByUserIdAndIsWishlist(Long userId, boolean isWishlist);
 }
