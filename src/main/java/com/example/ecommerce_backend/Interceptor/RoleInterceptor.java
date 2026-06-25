@@ -3,6 +3,7 @@ package com.example.ecommerce_backend.Interceptor;
 import com.example.ecommerce_backend.Entity.Role;
 import com.example.ecommerce_backend.Entity.User;
 import com.example.ecommerce_backend.Repository.UserRepository;
+import com.example.ecommerce_backend.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -14,9 +15,11 @@ import java.util.Optional;
 public class RoleInterceptor implements HandlerInterceptor {
 
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
 
-    public RoleInterceptor(UserRepository userRepository) {
+    public RoleInterceptor(UserRepository userRepository, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -26,43 +29,57 @@ public class RoleInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 1. Đọc UserId gửi kèm từ Header của request
-        String userIdHeader = request.getHeader("X-User-Id");
+        User user = null;
 
-        if (userIdHeader == null || userIdHeader.trim().isEmpty()) {
+        // 1. Kiểm tra header Authorization trước (JWT Bearer Token)
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7).trim();
+            try {
+                if (jwtUtil.validateToken(token)) {
+                    Long userId = jwtUtil.getUserIdFromToken(token);
+                    if (userId != null) {
+                        user = userRepository.findById(userId).orElse(null);
+                    }
+                }
+            } catch (Exception e) {
+                // Token lỗi hoặc hết hạn, fallback xuống kiểm tra X-User-Id
+            }
+        }
+
+        // 2. Fallback kiểm tra X-User-Id cũ nếu chưa xác định được User
+        if (user == null) {
+            String userIdHeader = request.getHeader("X-User-Id");
+            if (userIdHeader != null && !userIdHeader.trim().isEmpty()) {
+                try {
+                    Long userId = Long.parseLong(userIdHeader.trim());
+                    user = userRepository.findById(userId).orElse(null);
+                } catch (NumberFormatException e) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("Mã định danh người dùng không hợp lệ");
+                    return false;
+                }
+            }
+        }
+
+        // 3. Nếu vẫn không xác thực được User thì chặn đứng request
+        if (user == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
-            response.getWriter().write("Yeu cau dang nhap de truy cap");
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("Yêu cầu đăng nhập để truy cập");
             return false; // Ngăn chặn request tiếp tục đi vào Controller
         }
 
-        try {
-            Long userId = Long.parseLong(userIdHeader.trim());
-
-            // 2. Tra cứu thông tin người dùng trong cơ sở dữ liệu
-            Optional<User> userOpt = userRepository.findById(userId);
-            if (userOpt.isEmpty()) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Nguoi dung khong ton tai tren he thong");
-                return false;
-            }
-
-            User user = userOpt.get();
-
-            // 3. Kiểm tra phân quyền: Nếu không phải MANAGER thì chặn đứng request
-            if (user.getRole() != Role.MANAGER) {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
-                response.setCharacterEncoding("UTF-8");
-                response.getWriter().write("Quyen truy cap bi tu choi: Chi danh cho Admin/Manager");
-                return false;
-            }
-
-            // Hợp lệ, cho phép request đi tiếp vào Controller gác cổng quản trị
-            return true;
-
-        } catch (NumberFormatException e) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("Ma dinh danh nguoi dung khong hop le");
+        // 4. Kiểm tra phân quyền: Nếu không phải MANAGER thì chặn đứng request
+        if (user.getRole() != Role.MANAGER) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("Quyền truy cập bị từ chối: Chỉ dành cho Admin/Manager");
             return false;
         }
+
+        // Hợp lệ, cho phép request đi tiếp vào Controller gác cổng quản trị
+        return true;
     }
 }

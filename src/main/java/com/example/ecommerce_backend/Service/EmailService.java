@@ -29,17 +29,38 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    // 🌟 HÀM NÂNG CẤP: Gửi Email Hóa đơn HTML kèm mã QR Đơn hàng
+    // Hàm helper xây dựng bảng chi tiết sản phẩm HTML dùng chung
+    private String buildOrderItemsTable(Order order) {
+        StringBuilder table = new StringBuilder();
+        table.append("<table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>");
+        table.append("<tr style='background-color: #f8f9fa;'>")
+             .append("<th style='padding: 8px; border: 1px solid #ddd; text-align: left;'>Sản phẩm</th>")
+             .append("<th style='padding: 8px; border: 1px solid #ddd; text-align: center;'>SL</th>")
+             .append("<th style='padding: 8px; border: 1px solid #ddd; text-align: right;'>Đơn giá</th>")
+             .append("</tr>");
+
+        for (OrderItem item : order.getOrderItems()) {
+            table.append("<tr>")
+                 .append("<td style='padding: 8px; border: 1px solid #ddd;'>").append(item.getProduct().getProductName()).append("</td>")
+                 .append("<td style='padding: 8px; border: 1px solid #ddd; text-align: center;'>").append(item.getQuantity()).append("</td>")
+                 .append("<td style='padding: 8px; border: 1px solid #ddd; text-align: right;'>").append(String.format("%,.0fđ", item.getPrice())).append("</td>")
+                 .append("</tr>");
+        }
+        table.append("</table>");
+        table.append("<h3 style='text-align: right; color: #e74c3c;'>Tổng cộng: ")
+             .append(String.format("%,.0fđ", order.getTotalAmount())).append("</h3>");
+        return table.toString();
+    }
+
+    // 🌟 HÀM NÂNG CẤP: Gửi Email Hóa đơn HTML kèm mã QR Đơn hàng khi đã THANH TOÁN (PAID)
     public void sendOrderConfirmationEmail(String toEmail, Order order, byte[] qrCodeImage) {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
-            // Bật chế độ multipart = true để đính kèm được dữ liệu hình ảnh inline
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
             helper.setTo(toEmail);
             helper.setSubject("[JustLife] Hóa đơn thanh toán thành công - Đơn hàng #" + order.getId());
 
-            // 1. Thiết kế cấu trúc giao diện Email bằng HTML bảng biểu
             StringBuilder htmlContent = new StringBuilder();
             htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
             htmlContent.append("<h2 style='color: #2c3e50; text-align: center;'>CẢM ƠN BẠN ĐÃ MUA SẮM TẠI JUSTLIFE!</h2>");
@@ -54,25 +75,7 @@ public class EmailService {
 
             // Danh sách mặt hàng mua sắm
             htmlContent.append("<h3>🛍️ Chi tiết sản phẩm</h3>");
-            htmlContent.append("<table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>");
-            htmlContent.append("<tr style='background-color: #f8f9fa;'>")
-                    .append("<th style='padding: 8px; border: 1px solid #ddd; text-align: left;'>Sản phẩm</th>")
-                    .append("<th style='padding: 8px; border: 1px solid #ddd; text-align: center;'>SL</th>")
-                    .append("<th style='padding: 8px; border: 1px solid #ddd; text-align: right;'>Đơn giá</th>")
-                    .append("</tr>");
-
-            for (OrderItem item : order.getOrderItems()) {
-                htmlContent.append("<tr>")
-                        .append("<td style='padding: 8px; border: 1px solid #ddd;'>").append(item.getProduct().getProductName()).append("</td>")
-                        .append("<td style='padding: 8px; border: 1px solid #ddd; text-align: center;'>").append(item.getQuantity()).append("</td>")
-                        .append("<td style='padding: 8px; border: 1px solid #ddd; text-align: right;'>").append(String.format("%,.0fđ", item.getPrice())).append("</td>")
-                        .append("</tr>");
-            }
-            htmlContent.append("</table>");
-
-            // Tổng tiền
-            htmlContent.append("<h3 style='text-align: right; color: #e74c3c;'>Tổng cộng: ")
-                    .append(String.format("%,.0fđ", order.getTotalAmount())).append("</h3>");
+            htmlContent.append(buildOrderItemsTable(order));
 
             // Nhúng thẻ hình ảnh QR bằng mã CID (Content Identifier)
             htmlContent.append("<div style='text-align: center; margin-top: 30px; padding: 15px; background-color: #f9f9f9;'>");
@@ -82,15 +85,130 @@ public class EmailService {
             htmlContent.append("</div>");
             htmlContent.append("</div>");
 
-            // Thiết lập nội dung Email dưới dạng HTML
             helper.setText(htmlContent.toString(), true);
-
-            // 2. Thực hiện gắn mảng byte ảnh QR Code khớp với từ khóa Content-ID "qrCodeImageInline" ở trên
             helper.addInline("qrCodeImageInline", new ByteArrayResource(qrCodeImage), "image/png");
 
             mailSender.send(mimeMessage);
         } catch (Exception e) {
             throw new RuntimeException("Gặp lỗi khi gửi email hóa đơn: " + e.getMessage());
+        }
+    }
+
+    // 🌟 Gửi Email xác nhận đơn hàng mới (PENDING)
+    public void sendOrderPendingEmail(String toEmail, Order order) {
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("[JustLife] Xác nhận đơn hàng mới - Đơn hàng #" + order.getId());
+
+            StringBuilder htmlContent = new StringBuilder();
+            htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
+            htmlContent.append("<h2 style='color: #2c3e50; text-align: center;'>XÁC NHẬN ĐƠN HÀNG MỚI!</h2>");
+            htmlContent.append("<p>Xin chào <strong>").append(order.getUser().getFullName()).append("</strong>,</p>");
+            htmlContent.append("<p>Cảm ơn bạn đã mua sắm tại JustLife. Đơn hàng của bạn đã được ghi nhận thành công trên hệ thống và đang chờ xử lý.</p>");
+
+            // Thông tin giao hàng
+            htmlContent.append("<h3>📍 Thông tin giao hàng</h3>");
+            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getUser().getFullName()).append("</p>");
+            htmlContent.append("<p><strong>Số điện thoại:</strong> ").append(order.getPhoneNumber()).append("</p>");
+            htmlContent.append("<p><strong>Địa chỉ giao:</strong> ").append(order.getShippingAddress()).append("</p>");
+            htmlContent.append("<p><strong>Phương thức thanh toán:</strong> ").append(order.getPaymentMethod()).append("</p>");
+            htmlContent.append("<p><strong>Trạng thái:</strong> <span style='background-color: #f1c40f; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: bold;'>ĐANG CHỜ XỬ LÝ (PENDING)</span></p>");
+
+            // Chi tiết sản phẩm
+            htmlContent.append("<h3>🛍️ Chi tiết sản phẩm</h3>");
+            htmlContent.append(buildOrderItemsTable(order));
+
+            htmlContent.append("<hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'>");
+            htmlContent.append("<p style='font-size: 13px; color: #7f8c8d; text-align: center;'>Chúng tôi sẽ thông báo cho bạn khi đơn hàng được bàn giao cho đối tác vận chuyển.</p>");
+            htmlContent.append("</div>");
+
+            helper.setText(htmlContent.toString(), true);
+            mailSender.send(mimeMessage);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi gửi email xác nhận đặt hàng: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // 🌟 Gửi Email thông báo cập nhật trạng thái giao hàng (SHIPPING hoặc DELIVERED)
+    public void sendOrderStatusUpdateEmail(String toEmail, Order order, String newStatus) {
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            String statusVi = newStatus.equalsIgnoreCase("SHIPPING") ? "ĐANG GIAO HÀNG" : "ĐÃ GIAO THÀNH CÔNG";
+            String badgeColor = newStatus.equalsIgnoreCase("SHIPPING") ? "#2980b9" : "#27ae60";
+
+            helper.setTo(toEmail);
+            helper.setSubject("[JustLife] Cập nhật trạng thái đơn hàng #" + order.getId() + " - " + statusVi);
+
+            StringBuilder htmlContent = new StringBuilder();
+            htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
+            htmlContent.append("<h2 style='color: #2c3e50; text-align: center;'>CẬP NHẬT HÀNH TRÌNH ĐƠN HÀNG</h2>");
+            htmlContent.append("<p>Xin chào <strong>").append(order.getUser().getFullName()).append("</strong>,</p>");
+            
+            if (newStatus.equalsIgnoreCase("SHIPPING")) {
+                htmlContent.append("<p>Đơn hàng của bạn đã được đóng gói và bàn giao cho đối tác vận chuyển để giao tới bạn.</p>");
+            } else {
+                htmlContent.append("<p>Tuyệt vời! Đơn hàng của bạn đã được giao thành công. Cảm ơn bạn đã lựa chọn JustLife!</p>");
+            }
+
+            // Thông tin giao hàng
+            htmlContent.append("<h3>📍 Chi tiết giao hàng</h3>");
+            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getUser().getFullName()).append("</p>");
+            htmlContent.append("<p><strong>Số điện thoại:</strong> ").append(order.getPhoneNumber()).append("</p>");
+            htmlContent.append("<p><strong>Địa chỉ giao:</strong> ").append(order.getShippingAddress()).append("</p>");
+            htmlContent.append("<p><strong>Trạng thái hiện tại:</strong> <span style='background-color: ").append(badgeColor).append("; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: bold;'>").append(statusVi).append("</span></p>");
+
+            // Chi tiết sản phẩm
+            htmlContent.append("<h3>🛍️ Chi tiết sản phẩm</h3>");
+            htmlContent.append(buildOrderItemsTable(order));
+
+            htmlContent.append("</div>");
+
+            helper.setText(htmlContent.toString(), true);
+            mailSender.send(mimeMessage);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi gửi email cập nhật trạng thái đơn hàng: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // 🌟 Gửi Email thông báo hủy đơn hàng (CANCELLED)
+    public void sendOrderCancelledEmail(String toEmail, Order order) {
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("[JustLife] Thông báo hủy đơn hàng #" + order.getId());
+
+            StringBuilder htmlContent = new StringBuilder();
+            htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
+            htmlContent.append("<h2 style='color: #c0392b; text-align: center;'>ĐƠN HÀNG ĐÃ BỊ HỦY</h2>");
+            htmlContent.append("<p>Xin chào <strong>").append(order.getUser().getFullName()).append("</strong>,</p>");
+            htmlContent.append("<p>Chúng tôi rất tiếc phải thông báo rằng đơn hàng <strong>#").append(order.getId()).append("</strong> của bạn đã bị hủy trên hệ thống.</p>");
+            htmlContent.append("<p>Nếu bạn đã thực hiện thanh toán chuyển khoản trước đó, số tiền hoàn trả sẽ được xử lý theo quy trình hoàn tiền của chúng tôi. Vui lòng liên hệ bộ phận hỗ trợ khách hàng nếu cần trợ giúp gấp.</p>");
+
+            // Thông tin giao hàng
+            htmlContent.append("<h3>📍 Chi tiết đơn hàng bị hủy</h3>");
+            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getUser().getFullName()).append("</p>");
+            htmlContent.append("<p><strong>Trạng thái:</strong> <span style='background-color: #e74c3c; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: bold;'>ĐÃ HỦY (CANCELLED)</span></p>");
+
+            // Chi tiết sản phẩm
+            htmlContent.append("<h3>🛍️ Chi tiết sản phẩm</h3>");
+            htmlContent.append(buildOrderItemsTable(order));
+
+            htmlContent.append("</div>");
+
+            helper.setText(htmlContent.toString(), true);
+            mailSender.send(mimeMessage);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi gửi email báo hủy đơn hàng: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

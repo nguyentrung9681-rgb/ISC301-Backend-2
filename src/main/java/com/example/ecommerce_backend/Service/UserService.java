@@ -12,6 +12,14 @@ import org.springframework.stereotype.Service;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.ecommerce_backend.util.JwtUtil;
+import org.springframework.beans.factory.annotation.Value;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import java.util.Collections;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +34,11 @@ public class UserService {
     private PasswordResetTokenRepository tokenRepository;
     @Autowired
     private EmailService emailService;
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Value("${google.client-id}")
+    private String googleClientId;
 
     // 1. Logic xử lý khi nhận yêu cầu Quên mật khẩu
     @Transactional
@@ -128,7 +141,9 @@ public class UserService {
             throw new RuntimeException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên");
         }
 
-        return new UserResponseDTO(user);
+        UserResponseDTO response = new UserResponseDTO(user);
+        response.setToken(jwtUtil.generateToken(user));
+        return response;
     }
     public UserResponseDTO registerUser(RegisterRequestDTO request) {
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
@@ -231,5 +246,55 @@ public class UserService {
         // 4. Lưu xuống cơ sở dữ liệu và trả về DTO
         User savedUser = userRepository.save(newManager);
         return new UserResponseDTO(savedUser);
+    }
+
+    public UserResponseDTO loginGoogle(GoogleLoginRequestDTO request) {
+        try {
+            NetHttpTransport transport = new NetHttpTransport();
+            GsonFactory jsonFactory = GsonFactory.getDefaultInstance();
+
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(transport, jsonFactory)
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(request.getIdToken());
+            if (idToken == null) {
+                throw new RuntimeException("Google ID Token không hợp lệ!");
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+
+            if (email == null || email.trim().isEmpty()) {
+                throw new RuntimeException("Không thể lấy email từ Google ID Token!");
+            }
+
+            // Tìm hoặc tạo mới người dùng
+            User user = userRepository.findByEmail(email.trim()).orElseGet(() -> {
+                User newUser = new User();
+                newUser.setEmail(email.trim());
+                newUser.setFullName(name != null ? name : "Google User");
+                
+                // Mật khẩu ngẫu nhiên để vượt qua ràng buộc NOT NULL
+                String randomPassword = java.util.UUID.randomUUID().toString();
+                String hashedPassword = BCrypt.hashpw(randomPassword, BCrypt.gensalt());
+                newUser.setPassword(hashedPassword);
+                
+                newUser.setRole(Role.BUYER);
+                newUser.setAccountStatus(AccountStatus.ACTIVE);
+                return userRepository.save(newUser);
+            });
+
+            if (user.getAccountStatus() == AccountStatus.BANNED) {
+                throw new RuntimeException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên");
+            }
+
+            UserResponseDTO response = new UserResponseDTO(user);
+            response.setToken(jwtUtil.generateToken(user));
+            return response;
+        } catch (Exception e) {
+            throw new RuntimeException("Xác thực Google thất bại: " + e.getMessage(), e);
+        }
     }
 }

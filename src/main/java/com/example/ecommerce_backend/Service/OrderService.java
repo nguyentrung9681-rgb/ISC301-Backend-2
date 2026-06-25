@@ -28,6 +28,8 @@ public class OrderService {
     private VoucherRepository voucherRepository;
     @Autowired
     private VoucherService voucherService;
+    @Autowired
+    private EmailService emailService;
 
     @Transactional
     public Order createOrder(User user, String address, String phone, String paymentMethod) {
@@ -68,6 +70,14 @@ public class OrderService {
         paymentService.createPayment(savedOrder);
         // Xóa sạch giỏ hàng sau khi checkout thành công
         cartItemRepository.deleteByUserIdAndIsWishlist(user.getId(), false);
+
+        // Gửi email xác nhận đơn hàng mới (PENDING)
+        try {
+            emailService.sendOrderPendingEmail(user.getEmail(), savedOrder);
+        } catch (Exception e) {
+            System.err.println("Lỗi gửi email xác nhận đặt hàng: " + e.getMessage());
+        }
+
         return savedOrder;
     }
 
@@ -96,6 +106,14 @@ public class OrderService {
         Order cancelledOrder = orderRepository.save(order);
         // Cập nhật trạng thái thanh toán sang REFUNDED khi đơn bị hủy
         paymentService.refundPayment(orderId);
+
+        // Gửi email báo hủy đơn hàng
+        try {
+            emailService.sendOrderCancelledEmail(cancelledOrder.getUser().getEmail(), cancelledOrder);
+        } catch (Exception e) {
+            System.err.println("Lỗi gửi email báo hủy đơn hàng: " + e.getMessage());
+        }
+
         return cancelledOrder;
     }
 
@@ -107,8 +125,22 @@ public class OrderService {
         if (order.getStatus().equals("CANCELLED")) {
             throw new RuntimeException("Không thể cập nhật trạng thái cho đơn hàng đã hủy!");
         }
-        order.setStatus(newStatus.toUpperCase());
-        return orderRepository.save(order);
+        String oldStatus = order.getStatus();
+        String formattedStatus = newStatus.toUpperCase();
+        order.setStatus(formattedStatus);
+        Order savedOrder = orderRepository.save(order);
+
+        // Gửi email cập nhật trạng thái nếu chuyển sang SHIPPING hoặc DELIVERED
+        if (!oldStatus.equalsIgnoreCase(formattedStatus) &&
+            (formattedStatus.equals("SHIPPING") || formattedStatus.equals("DELIVERED"))) {
+            try {
+                emailService.sendOrderStatusUpdateEmail(savedOrder.getUser().getEmail(), savedOrder, formattedStatus);
+            } catch (Exception e) {
+                System.err.println("Lỗi gửi email cập nhật trạng thái đơn hàng: " + e.getMessage());
+            }
+        }
+
+        return savedOrder;
     }
 
     // 4. Xem danh sách đơn hàng
@@ -175,6 +207,14 @@ public class OrderService {
         paymentService.createPayment(savedOrder); // Tự động tạo bản ghi thanh toán kèm theo
 
         cartItemRepository.deleteByUserIdAndIsWishlist(user.getId(), false);
+
+        // Gửi email xác nhận đơn hàng mới (PENDING)
+        try {
+            emailService.sendOrderPendingEmail(user.getEmail(), savedOrder);
+        } catch (Exception e) {
+            System.err.println("Lỗi gửi email xác nhận đặt hàng: " + e.getMessage());
+        }
+
         return savedOrder;
     }
 }

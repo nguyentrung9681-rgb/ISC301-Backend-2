@@ -3,6 +3,7 @@ package com.example.ecommerce_backend.dto;
 import com.example.ecommerce_backend.Entity.AccountStatus;
 import com.example.ecommerce_backend.Entity.Role;
 import com.example.ecommerce_backend.Entity.User;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 public class UserResponseDTO {
 
@@ -13,6 +14,9 @@ public class UserResponseDTO {
     private String address;
     private Role role;
     private AccountStatus accountStatus;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String token;
 
     public UserResponseDTO(User user) {
         this.id = user.getId();
@@ -50,5 +54,13 @@ public class UserResponseDTO {
 
     public AccountStatus getAccountStatus() {
         return accountStatus;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 }

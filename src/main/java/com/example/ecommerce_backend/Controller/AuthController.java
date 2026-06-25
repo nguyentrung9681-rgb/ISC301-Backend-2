@@ -59,4 +59,16 @@ public class AuthController {
             return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
+
+    // API Đăng nhập bằng Google
+    // POST: http://localhost:8080/api/auth/google
+    @PostMapping("/google")
+    public ResponseEntity<?> loginGoogle(@RequestBody GoogleLoginRequestDTO request) {
+        try {
+            UserResponseDTO response = userService.loginGoogle(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
+    }
 }
