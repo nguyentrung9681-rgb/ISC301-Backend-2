@@ -27,10 +27,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .maxAge(3600); // Thời gian trình duyệt được phép lưu cache kết quả Preflight request
     }
 
-    // Đăng ký bộ lọc Interceptor chặn cổng quản trị viên
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(roleInterceptor)
-                .addPathPatterns("/api/manager/**"); // CHỈ ÁP DỤNG bộ lọc cho các đường dẫn quản trị viên
+                .addPathPatterns("/api/manager/**", "/api/admin/**"); // Áp dụng bộ lọc cho các đường dẫn quản trị viên và admin
     }
 }
