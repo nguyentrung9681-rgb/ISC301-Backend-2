@@ -15,7 +15,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/client/addresses")
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserAddressController {
 
     private final UserAddressService addressService;

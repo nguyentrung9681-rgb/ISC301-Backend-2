@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 @RestController
 @RequestMapping("/api/manager/users")
-@CrossOrigin(origins = "http://localhost:3000")
 public class ManageUserController {
     private final UserService userService;
 

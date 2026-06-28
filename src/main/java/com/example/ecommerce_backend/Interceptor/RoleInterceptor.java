@@ -56,8 +56,9 @@ public class RoleInterceptor implements HandlerInterceptor {
                     user = userRepository.findById(userId).orElse(null);
                 } catch (NumberFormatException e) {
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    response.setContentType("application/json");
                     response.setCharacterEncoding("UTF-8");
-                    response.getWriter().write("Mã định danh người dùng không hợp lệ");
+                    response.getWriter().write("{\"success\":false,\"message\":\"Mã định danh người dùng không hợp lệ\",\"data\":null}");
                     return false;
                 }
             }
@@ -66,16 +67,18 @@ public class RoleInterceptor implements HandlerInterceptor {
         // 3. Nếu vẫn không xác thực được User thì chặn đứng request
         if (user == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+            response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
-            response.getWriter().write("Yêu cầu đăng nhập để truy cập");
+            response.getWriter().write("{\"success\":false,\"message\":\"Yêu cầu đăng nhập để truy cập\",\"data\":null}");
             return false; // Ngăn chặn request tiếp tục đi vào Controller
         }
 
         // 4. Kiểm tra phân quyền: Nếu không phải MANAGER thì chặn đứng request
         if (user.getRole() != Role.MANAGER) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
+            response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
-            response.getWriter().write("Quyền truy cập bị từ chối: Chỉ dành cho Admin/Manager");
+            response.getWriter().write("{\"success\":false,\"message\":\"Quyền truy cập bị từ chối: Chỉ dành cho Admin/Manager\",\"data\":null}");
             return false;
         }
 

@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:3000") // Cho phép kết nối từ Front-end của bạn
 public class AuthController {
 
     private final UserService userService;
@@ -33,10 +32,10 @@ public class AuthController {
     // 2. API Đăng xuất
 // POST: http://localhost:8080/api/auth/logout
     @PostMapping("/logout")
-    public String logout() {
+    public ResponseEntity<ApiResponse<Void>> logout() {
         // Vì hiện tại hệ thống là Stateless (hoặc xử lý lưu Token/Session ở Client)
         // Phía FE chỉ cần xóa dữ liệu User/Token trong localStorage/sessionStorage khi gọi API này.
-        return "Đăng xuất thành công";
+        return ResponseEntity.ok(ApiResponse.ok("Đăng xuất thành công", null));
     }
     //3.API quen mat khau
     @PostMapping("/forgot-password")
