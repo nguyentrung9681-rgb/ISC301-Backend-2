@@ -173,21 +173,21 @@ public class UserService {
         return new UserResponseDTO(savedUser);
     }
 
-    // View user: Manager xem toàn bộ khách hàng
+    // View user: Manager xem toàn bộ khách hàng và nhân viên
     public List<UserResponseDTO> getAllBuyers() {
-        return userRepository.findByRole(Role.BUYER)
+        return userRepository.findByRoleIn(List.of(Role.BUYER, Role.STAFF))
                 .stream()
                 .map(UserResponseDTO::new)
                 .toList();
     }
 
-    // Search user: Manager tìm khách hàng theo email hoặc số điện thoại
+    // Search user: Manager tìm khách hàng/nhân viên theo email hoặc số điện thoại
     public List<UserResponseDTO> searchBuyers(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             return getAllBuyers();
         }
 
-        return userRepository.searchUsersByEmailOrPhone(keyword.trim(), Role.BUYER)
+        return userRepository.searchUsersByEmailOrPhoneAndRoles(keyword.trim(), List.of(Role.BUYER, Role.STAFF))
                 .stream()
                 .map(UserResponseDTO::new)
                 .toList();
@@ -202,8 +202,8 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        if (user.getRole() != Role.BUYER) {
-            throw new RuntimeException("Only buyer accounts can be updated in User Management");
+        if (user.getRole() != Role.BUYER && user.getRole() != Role.STAFF) {
+            throw new RuntimeException("Only buyer and staff accounts can be updated in User Management");
         }
 
         user.setAccountStatus(status);
@@ -247,6 +247,43 @@ public class UserService {
         User savedUser = userRepository.save(newManager);
         return new UserResponseDTO(savedUser);
     }
+
+    @Transactional
+    public UserResponseDTO registerStaff(RegisterManagerRequestDTO request) {
+        // 1. Kiểm tra dữ liệu bắt buộc không được để trống
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new RuntimeException("Email không được để trống");
+        }
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new RuntimeException("Mật khẩu không được để trống");
+        }
+
+        // 2. Kiểm tra xem Email đăng ký đã tồn tại trong hệ thống hay chưa
+        if (userRepository.findByEmail(request.getEmail().trim()).isPresent()) {
+            throw new RuntimeException("Email này đã được đăng ký trên hệ thống!");
+        }
+
+        // 3. Khởi tạo đối tượng User mới và điền thông tin
+        User newStaff = new User();
+        newStaff.setEmail(request.getEmail().trim());
+
+        // Mã hóa bảo mật mật khẩu bằng BCrypt
+        String hashedPassword = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
+        newStaff.setPassword(hashedPassword);
+
+        newStaff.setFullName(request.getFullName());
+        newStaff.setPhone(request.getPhone());
+        newStaff.setAddress(request.getAddress() != null ? request.getAddress().trim() : "Văn phòng JustLife");
+
+        // Thiết lập vai trò (role) cố định là STAFF và trạng thái hoạt động
+        newStaff.setRole(Role.STAFF);
+        newStaff.setAccountStatus(AccountStatus.ACTIVE);
+
+        // 4. Lưu xuống cơ sở dữ liệu và trả về DTO
+        User savedUser = userRepository.save(newStaff);
+        return new UserResponseDTO(savedUser);
+    }
+
 
     public UserResponseDTO loginGoogle(GoogleLoginRequestDTO request) {
         try {

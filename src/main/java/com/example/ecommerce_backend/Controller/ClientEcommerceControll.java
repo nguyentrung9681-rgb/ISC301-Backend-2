@@ -154,9 +154,9 @@ public class ClientEcommerceControll {
     // ========== PAYOS ==========
 
     @PostMapping("/payment/payos/{orderId}")
-    public ResponseEntity<ApiResponse<String>> generatePayOSLink(@PathVariable Long orderId) {
-        String checkoutUrl = paymentService.createPayOSPayment(orderId);
-        return ResponseEntity.ok(ApiResponse.ok("Link thanh toán đã được tạo", checkoutUrl));
+    public ResponseEntity<ApiResponse<java.util.Map<String, String>>> generatePayOSLink(@PathVariable Long orderId) {
+        java.util.Map<String, String> paymentData = paymentService.createPayOSPayment(orderId);
+        return ResponseEntity.ok(ApiResponse.ok("Link thanh toán đã được tạo", paymentData));
     }
 
     // ========== VOUCHER ==========
@@ -164,6 +164,11 @@ public class ClientEcommerceControll {
     @GetMapping("/voucher/validate")
     public ResponseEntity<ApiResponse<Voucher>> checkVoucher(@RequestParam String code) {
         return ResponseEntity.ok(ApiResponse.ok(voucherService.validateVoucher(code)));
+    }
+
+    @GetMapping("/voucher/active")
+    public ResponseEntity<ApiResponse<List<Voucher>>> getActiveVouchers() {
+        return ResponseEntity.ok(ApiResponse.ok(voucherService.getActiveVouchersForClient()));
     }
 
     @PostMapping("/order/checkout-with-voucher")

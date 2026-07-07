@@ -73,16 +73,59 @@ public class RoleInterceptor implements HandlerInterceptor {
             return false; // Ngăn chặn request tiếp tục đi vào Controller
         }
 
-        // 4. Kiểm tra phân quyền: Nếu không phải MANAGER thì chặn đứng request
-        if (user.getRole() != Role.MANAGER) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write("{\"success\":false,\"message\":\"Quyền truy cập bị từ chối: Chỉ dành cho Admin/Manager\",\"data\":null}");
-            return false;
+        // 4. Kiểm tra phân quyền: Phân chia chi tiết giữa STAFF và MANAGER
+        String path = request.getServletPath();
+        String method = request.getMethod();
+
+        if (user.getRole() == Role.MANAGER) {
+            return true;
         }
 
-        // Hợp lệ, cho phép request đi tiếp vào Controller gác cổng quản trị
-        return true;
+        if (user.getRole() == Role.STAFF) {
+            boolean isAllowed = false;
+
+            // 1. Quản lý sản phẩm: STAFF được quyền (Xem, Thêm, Sửa, Ẩn sản phẩm, Upload ảnh) trừ duyệt/từ chối sản phẩm
+            if (path.startsWith("/api/manager/products")) {
+                if (path.endsWith("/approve") || path.endsWith("/reject")) {
+                    isAllowed = false;
+                } else {
+                    isAllowed = true;
+                }
+            }
+            // 2. Quản lý danh mục: STAFF chỉ được xem danh mục (GET)
+            else if (path.startsWith("/api/manager/categories") && "GET".equalsIgnoreCase(method)) {
+                isAllowed = true;
+            }
+            // 3. Quản lý mã giảm giá: STAFF chỉ được xem danh sách mã giảm giá (GET)
+            else if (path.startsWith("/api/manager/voucher/list") && "GET".equalsIgnoreCase(method)) {
+                isAllowed = true;
+            }
+            // 4. Quản lý Buyer: STAFF chỉ được xem danh sách hoặc tìm kiếm Buyer (GET)
+            else if (path.startsWith("/api/manager/users") && "GET".equalsIgnoreCase(method)) {
+                // Bảo vệ các endpoint không dành cho STAFF: tạo manager, tạo staff, đổi status
+                if (!path.contains("/create-manager") && !path.contains("/create-staff") && !path.contains("/status")) {
+                    isAllowed = true;
+                }
+            }
+            // 5. Quản lý đơn hàng: STAFF được xem đơn hàng (GET) và cập nhật trạng thái đơn (PUT)
+            else if (path.startsWith("/api/admin/orders")) {
+                if ("GET".equalsIgnoreCase(method)) {
+                    isAllowed = true;
+                } else if ("PUT".equalsIgnoreCase(method) && path.matches("^/api/admin/orders/\\d+/status$")) {
+                    isAllowed = true;
+                }
+            }
+
+            if (isAllowed) {
+                return true;
+            }
+        }
+
+        // Không đủ quyền truy cập
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{\"success\":false,\"message\":\"Quyền truy cập bị từ chối: Bạn không có quyền thực hiện chức năng này\",\"data\":null}");
+        return false;
     }
 }

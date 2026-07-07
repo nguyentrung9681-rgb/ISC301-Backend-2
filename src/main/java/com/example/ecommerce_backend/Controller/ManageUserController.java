@@ -52,4 +52,16 @@ public class ManageUserController {
             return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
+
+    //post /api/manager/users/create-staff -> nhận request khởi tạo tài khoản staff
+    @PostMapping("/create-staff")
+    public ResponseEntity<?> createStaff(@RequestBody RegisterManagerRequestDTO request) {
+        try {
+            UserResponseDTO savedStaff = userService.registerStaff(request);
+            return ResponseEntity.ok(savedStaff);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
+    }
+
 }

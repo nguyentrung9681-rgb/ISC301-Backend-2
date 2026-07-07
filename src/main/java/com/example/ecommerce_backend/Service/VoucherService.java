@@ -18,10 +18,10 @@ public class VoucherService {
         if (voucher.getCode() == null || voucher.getCode().isBlank()) {
             throw new RuntimeException("Mã voucher không được để trống!");
         }
-        if (voucher.getDiscountPercent() <= 0 || voucher.getDiscountPercent() > 100) {
+        if (voucher.getDiscountPercent() == null || voucher.getDiscountPercent() <= 0 || voucher.getDiscountPercent() > 100) {
             throw new RuntimeException("Phần trăm giảm giá phải từ 1 đến 100!");
         }
-        if (voucher.getMaxUses() <= 0) {
+        if (voucher.getMaxUses() == null || voucher.getMaxUses() <= 0) {
             throw new RuntimeException("Số lượt dùng tối đa phải lớn hơn 0!");
         }
         if (voucherRepository.findByCode(voucher.getCode()).isPresent()) {
@@ -49,7 +49,7 @@ public class VoucherService {
         Voucher voucher = voucherRepository.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Mã giảm giá không tồn tại!"));
 
-        if (!voucher.isActive()) {
+        if (voucher.getActive() == null || !voucher.getActive()) {
             throw new RuntimeException("Mã giảm giá này đã bị vô hiệu hóa!");
         }
 
@@ -57,11 +57,15 @@ public class VoucherService {
             throw new RuntimeException("Mã giảm giá này đã hết hạn sử dụng!");
         }
 
-        if (voucher.getUsedCount() >= voucher.getMaxUses()) {
+        if (voucher.getUsedCount() == null || voucher.getMaxUses() == null || voucher.getUsedCount() >= voucher.getMaxUses()) {
             throw new RuntimeException("Mã giảm giá này đã hết lượt sử dụng!");
         }
 
         return voucher;
+    }
+
+    public List<Voucher> getActiveVouchersForClient() {
+        return voucherRepository.findActiveVouchers(LocalDateTime.now());
     }
 }
 

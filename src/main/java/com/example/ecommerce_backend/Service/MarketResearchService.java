@@ -1,9 +1,11 @@
 package com.example.ecommerce_backend.Service;
 
 import com.example.ecommerce_backend.Entity.Product;
+import com.example.ecommerce_backend.Entity.FunnelEvent;
 import com.example.ecommerce_backend.Repository.OrderItemRepository;
 import com.example.ecommerce_backend.Repository.OrderRepository;
 import com.example.ecommerce_backend.Repository.ProductRepository;
+import com.example.ecommerce_backend.Repository.FunnelEventRepository;
 import com.example.ecommerce_backend.dto.MarketResearchDTO.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -30,6 +32,9 @@ public class MarketResearchService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private FunnelEventRepository funnelEventRepository;
 
     // ---------------------------------------------------------------
     // 1. Thống kê doanh thu tổng hợp theo khoảng thời gian
@@ -186,5 +191,74 @@ public class MarketResearchService {
         if (obj == null) return BigDecimal.ZERO;
         if (obj instanceof BigDecimal) return (BigDecimal) obj;
         return BigDecimal.valueOf(((Number) obj).doubleValue());
+    }
+
+    // ---------------------------------------------------------------
+    // 9. Ghi nhận sự kiện phễu
+    // ---------------------------------------------------------------
+    public void trackFunnelEvent(String eventType, String sessionId, Long productId) {
+        FunnelEvent event = new FunnelEvent();
+        event.setEventType(eventType);
+        event.setSessionId(sessionId);
+        event.setProductId(productId);
+        event.setTimestamp(LocalDateTime.now());
+        funnelEventRepository.save(event);
+    }
+
+    // ---------------------------------------------------------------
+    // 10. Lấy thống kê phễu chuyển đổi
+    // ---------------------------------------------------------------
+    public FunnelStatsDTO getFunnelStats() {
+        if (funnelEventRepository.count() == 0) {
+            seedFunnelEvents();
+        }
+
+        long views = funnelEventRepository.countUniqueSessionsByEventType("VIEW_PRODUCT");
+        long carts = funnelEventRepository.countUniqueSessionsByEventType("ADD_TO_CART");
+        long checkouts = funnelEventRepository.countUniqueSessionsByEventType("INITIATE_CHECKOUT");
+        long purchases = funnelEventRepository.countUniqueSessionsByEventType("PURCHASE");
+
+        // Tính tỉ lệ phần trăm làm tròn đến 1 chữ số thập phân
+        double viewToCart = views > 0 ? Math.round((carts * 1000.0) / views) / 10.0 : 0.0;
+        double cartToCheckout = carts > 0 ? Math.round((checkouts * 1000.0) / carts) / 10.0 : 0.0;
+        double checkoutToPurchase = checkouts > 0 ? Math.round((purchases * 1000.0) / checkouts) / 10.0 : 0.0;
+        double overallConversion = views > 0 ? Math.round((purchases * 1000.0) / views) / 10.0 : 0.0;
+
+        return new FunnelStatsDTO(views, carts, checkouts, purchases, viewToCart, cartToCheckout, checkoutToPurchase, overallConversion);
+    }
+
+    // ---------------------------------------------------------------
+    // Helper: Sinh dữ liệu phễu chuyển đổi mẫu
+    // ---------------------------------------------------------------
+    private void seedFunnelEvents() {
+        java.util.Random random = new java.util.Random();
+        int totalSessions = 250; // Tổng số lượt truy cập mẫu lớn hơn một chút để trực quan
+
+        for (int i = 0; i < totalSessions; i++) {
+            String sessionId = "session_mock_" + java.util.UUID.randomUUID().toString().substring(0, 8);
+            LocalDateTime baseTime = LocalDateTime.now().minusDays(random.nextInt(30)).minusHours(random.nextInt(24));
+
+            // Bước 1: Xem sản phẩm (100% session)
+            FunnelEvent viewEvent = new FunnelEvent(null, "VIEW_PRODUCT", sessionId, null, baseTime);
+            funnelEventRepository.save(viewEvent);
+
+            // Bước 2: Thêm vào giỏ hàng (~48% tỉ lệ chuyển đổi)
+            if (random.nextDouble() < 0.48) {
+                FunnelEvent cartEvent = new FunnelEvent(null, "ADD_TO_CART", sessionId, null, baseTime.plusMinutes(2 + random.nextInt(5)));
+                funnelEventRepository.save(cartEvent);
+
+                // Bước 3: Tiến hành thanh toán (~52% từ giỏ hàng sang checkout)
+                if (random.nextDouble() < 0.52) {
+                    FunnelEvent checkoutEvent = new FunnelEvent(null, "INITIATE_CHECKOUT", sessionId, null, baseTime.plusMinutes(7 + random.nextInt(10)));
+                    funnelEventRepository.save(checkoutEvent);
+
+                    // Bước 4: Mua hàng thành công (~60% từ checkout sang đơn hàng thành công)
+                    if (random.nextDouble() < 0.60) {
+                        FunnelEvent purchaseEvent = new FunnelEvent(null, "PURCHASE", sessionId, null, baseTime.plusMinutes(15 + random.nextInt(10)));
+                        funnelEventRepository.save(purchaseEvent);
+                    }
+                }
+            }
+        }
     }
 }

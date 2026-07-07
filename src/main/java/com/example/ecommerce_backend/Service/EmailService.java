@@ -39,7 +39,9 @@ public class EmailService {
              .append("<th style='padding: 8px; border: 1px solid #ddd; text-align: right;'>Đơn giá</th>")
              .append("</tr>");
 
+        java.math.BigDecimal subTotal = java.math.BigDecimal.ZERO;
         for (OrderItem item : order.getOrderItems()) {
+            subTotal = subTotal.add(item.getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())));
             table.append("<tr>")
                  .append("<td style='padding: 8px; border: 1px solid #ddd;'>").append(item.getProduct().getProductName()).append("</td>")
                  .append("<td style='padding: 8px; border: 1px solid #ddd; text-align: center;'>").append(item.getQuantity()).append("</td>")
@@ -47,8 +49,27 @@ public class EmailService {
                  .append("</tr>");
         }
         table.append("</table>");
-        table.append("<h3 style='text-align: right; color: #e74c3c;'>Tổng cộng: ")
+
+        java.math.BigDecimal shippingFee = java.math.BigDecimal.ZERO;
+        if (subTotal.compareTo(java.math.BigDecimal.valueOf(500000)) < 0 && subTotal.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            shippingFee = java.math.BigDecimal.valueOf(30000);
+        }
+
+        java.math.BigDecimal discountAmount = subTotal.add(shippingFee).subtract(order.getTotalAmount());
+        if (discountAmount.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            discountAmount = java.math.BigDecimal.ZERO;
+        }
+
+        table.append("<div style='text-align: right; line-height: 1.6; font-size: 14px;'>");
+        table.append("<div>Tạm tính: <strong>").append(String.format("%,.0fđ", subTotal)).append("</strong></div>");
+        table.append("<div>Phí vận chuyển: <strong>").append(shippingFee.compareTo(java.math.BigDecimal.ZERO) > 0 ? String.format("%,.0fđ", shippingFee) : "Miễn phí").append("</strong></div>");
+        if (discountAmount.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            table.append("<div style='color: #27ae60;'>Giảm giá: <strong>-").append(String.format("%,.0fđ", discountAmount)).append("</strong></div>");
+        }
+        table.append("<h3 style='color: #e74c3c; margin-top: 10px; margin-bottom: 0;'>Tổng cộng: ")
              .append(String.format("%,.0fđ", order.getTotalAmount())).append("</h3>");
+        table.append("</div>");
+
         return table.toString();
     }
 

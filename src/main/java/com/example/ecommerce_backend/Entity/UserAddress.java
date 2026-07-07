@@ -14,13 +14,13 @@ public class UserAddress {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "full_name", length = 100, nullable = false)
+    @Column(name = "full_name", length = 100, nullable = false, columnDefinition = "NVARCHAR(100)")
     private String fullName;
 
     @Column(name = "phone", length = 20, nullable = false)
     private String phone;
 
-    @Column(name = "address_detail", length = 255, nullable = false)
+    @Column(name = "address_detail", length = 255, nullable = false, columnDefinition = "NVARCHAR(255)")
     private String addressDetail;
 
     @Column(name = "address_type", length = 20)

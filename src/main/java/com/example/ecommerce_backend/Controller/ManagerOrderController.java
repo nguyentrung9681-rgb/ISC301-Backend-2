@@ -3,6 +3,7 @@ package com.example.ecommerce_backend.Controller;
 import com.example.ecommerce_backend.Entity.Order;
 import com.example.ecommerce_backend.Service.OrderService;
 import com.example.ecommerce_backend.Entity.User;
+import com.example.ecommerce_backend.dto.AdminOrderResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,8 +18,8 @@ public class ManagerOrderController {
 
     // Xem toàn bộ đơn hàng hiện có trên hệ thống
     @GetMapping
-    public ResponseEntity<List<Order>> viewAllOrders() {
-        return ResponseEntity.ok(orderService.getAllOrders());
+    public ResponseEntity<List<AdminOrderResponseDTO>> viewAllOrders() {
+        return ResponseEntity.ok(orderService.getAllOrdersForAdmin());
     }
 
     // Tiếp nhận đơn hàng và cập nhật trạng thái (PENDING => SHIPPING => DELIVERED)

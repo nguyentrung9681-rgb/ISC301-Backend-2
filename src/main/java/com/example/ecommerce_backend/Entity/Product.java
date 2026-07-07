@@ -31,6 +31,12 @@ public class Product {
     @Column(name = "category", length = 100)
     private String category;
 
+    @Column(name = "size", length = 255, columnDefinition = "NVARCHAR(255)")
+    private String size;
+
+    @Column(name = "color", length = 255, columnDefinition = "NVARCHAR(255)")
+    private String color;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "product_status", length = 20)
     private ProductStatus productStatus = ProductStatus.ACTIVE;
@@ -70,6 +76,14 @@ public class Product {
         return category;
     }
 
+    public String getSize() {
+        return size;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
     public ProductStatus getProductStatus() {
         return productStatus;
     }
@@ -104,6 +118,14 @@ public class Product {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public void setSize(String size) {
+        this.size = size;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 
     public void setProductStatus(ProductStatus productStatus) {

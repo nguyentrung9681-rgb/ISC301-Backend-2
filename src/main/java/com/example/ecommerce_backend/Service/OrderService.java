@@ -5,6 +5,7 @@ import com.example.ecommerce_backend.Repository.CartItemRepository;
 import com.example.ecommerce_backend.Repository.OrderRepository;
 import com.example.ecommerce_backend.Repository.ProductRepository;
 import com.example.ecommerce_backend.Repository.VoucherRepository;
+import com.example.ecommerce_backend.dto.AdminOrderResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +64,12 @@ public class OrderService {
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity())));
         }
 
+        BigDecimal shippingFee = BigDecimal.ZERO;
+        if (totalAmount.compareTo(BigDecimal.valueOf(500000)) < 0 && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
+            shippingFee = BigDecimal.valueOf(30000);
+        }
+        totalAmount = totalAmount.add(shippingFee);
+
         order.setTotalAmount(totalAmount);
         order.setOrderItems(orderItems);
 
@@ -89,6 +96,14 @@ public class OrderService {
         // Nếu là khách hàng, chỉ được phép hủy khi đơn ở trạng thái PENDING
         if (!isManager && !order.getStatus().equals("PENDING")) {
             throw new RuntimeException("Bạn chỉ có thể hủy đơn hàng khi trạng thái là PENDING!");
+        }
+
+        // Nếu là khách hàng, không được tự hủy khi đã thanh toán (PAID) qua cổng online
+        if (!isManager) {
+            String paymentStatus = paymentService.getPaymentStatusByOrderId(orderId);
+            if ("PAID".equals(paymentStatus)) {
+                throw new RuntimeException("Đơn hàng đã được thanh toán thành công. Không thể tự hủy đơn hàng, vui lòng liên hệ quản lý để được hỗ trợ hoàn tiền!");
+            }
         }
 
         if (order.getStatus().equals("CANCELLED") || order.getStatus().equals("DELIVERED")) {
@@ -148,6 +163,30 @@ public class OrderService {
         return orderRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public List<AdminOrderResponseDTO> getAllOrdersForAdmin() {
+        return orderRepository.findAllWithDetails().stream()
+                .map(order -> new AdminOrderResponseDTO(
+                        order.getId(),
+                        order.getUser() != null ? order.getUser().getFullName() : "Khach hang",
+                        order.getPhoneNumber(),
+                        order.getShippingAddress(),
+                        order.getTotalAmount(),
+                        order.getPaymentMethod(),
+                        order.getStatus(),
+                        paymentService.getPaymentStatusByOrderId(order.getId()),
+                        order.getOrderDate(),
+                        order.getOrderItems() == null ? List.of() : order.getOrderItems().stream()
+                                .map(item -> new AdminOrderResponseDTO.AdminOrderItemResponseDTO(
+                                        item.getId(),
+                                        item.getProduct() != null ? item.getProduct().getId() : null,
+                                        item.getProduct() != null ? item.getProduct().getProductName() : "San pham",
+                                        item.getQuantity(),
+                                        item.getPrice()))
+                                .toList()))
+                .toList();
+    }
+
     public List<Order> getClientOrderHistory(Long userId) {
         return orderRepository.findByUserIdOrderByOrderDateDesc(userId);
     }
@@ -195,6 +234,12 @@ public class OrderService {
         BigDecimal finalAmount = subTotal.subtract(discountAmount);
         if (finalAmount.compareTo(BigDecimal.ZERO) < 0)
             finalAmount = BigDecimal.ZERO;
+
+        BigDecimal shippingFee = BigDecimal.ZERO;
+        if (subTotal.compareTo(BigDecimal.valueOf(500000)) < 0 && subTotal.compareTo(BigDecimal.ZERO) > 0) {
+            shippingFee = BigDecimal.valueOf(30000);
+        }
+        finalAmount = finalAmount.add(shippingFee);
 
         order.setTotalAmount(finalAmount);
         order.setOrderItems(orderItems);

@@ -21,18 +21,17 @@ public class Voucher {
     private String code;
 
     @Column(nullable = false)
-    private int discountPercent; // 1 - 100 (%)
+    private Integer discountPercent; // 1 - 100 (%)
 
     @Column(nullable = false)
-    private int maxUses;         // số lượt dùng tối đa
+    private Integer maxUses;         // số lượt dùng tối đa
 
-    private int usedCount = 0;   // số lượt đã dùng (mặc định 0)
+    private Integer usedCount = 0;   // số lượt đã dùng (mặc định 0)
 
     private LocalDateTime expiryDate; // null = không hết hạn
 
     // Dùng tên "active" thay vì "isActive" để Lombok sinh getActive()/setActive()
     // tránh xung đột với JSON serialization (Jackson expect "active" key)
     @Column(nullable = false)
-    private boolean active = true;
+    private Boolean active = true;
 }
-

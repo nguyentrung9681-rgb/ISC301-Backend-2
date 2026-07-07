@@ -1,5 +1,6 @@
 package com.example.ecommerce_backend.Service;
 
+import com.example.ecommerce_backend.Entity.Order;
 import com.example.ecommerce_backend.Entity.Product;
 import com.example.ecommerce_backend.Entity.ProductReview;
 import com.example.ecommerce_backend.Entity.User;
@@ -31,9 +32,14 @@ public class ReviewService {
     @Transactional
     public ProductReview addReview(ReviewRequestDTO dto, User currentUser) {
         // Kiểm tra đơn hàng tồn tại và thuộc về user hiện tại
-        orderRepository.findById(dto.getOrderId())
-                .filter(order -> order.getUser().getId().equals(currentUser.getId()))
+        Order order = orderRepository.findById(dto.getOrderId())
+                .filter(o -> o.getUser().getId().equals(currentUser.getId()))
                 .orElseThrow(() -> new RuntimeException("Đơn hàng không hợp lệ hoặc bạn chưa mua sản phẩm này!"));
+
+        // Chỉ cho phép đánh giá khi đơn hàng ở trạng thái DELIVERED
+        if (!"DELIVERED".equalsIgnoreCase(order.getStatus())) {
+            throw new RuntimeException("Bạn chỉ có thể đánh giá sản phẩm sau khi đơn hàng đã được giao thành công!");
+        }
 
         // Kiểm tra sản phẩm tồn tại
         Product product = productRepository.findById(dto.getProductId())

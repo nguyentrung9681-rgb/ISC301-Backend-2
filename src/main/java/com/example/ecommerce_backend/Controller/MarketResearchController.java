@@ -137,4 +137,15 @@ public class MarketResearchController {
     public ResponseEntity<List<OrderStatusStatsDTO>> getOrderStatusBreakdown() {
         return ResponseEntity.ok(marketResearchService.getOrderStatusBreakdown());
     }
+
+    /**
+     * Thống kê phễu chuyển đổi (Conversion Funnel).
+     *
+     * GET /api/admin/market-research/funnel
+     */
+    @GetMapping("/funnel")
+    public ResponseEntity<FunnelStatsDTO> getFunnelStats() {
+        return ResponseEntity.ok(marketResearchService.getFunnelStats());
+    }
 }
+

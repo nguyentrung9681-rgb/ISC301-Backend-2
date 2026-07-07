@@ -27,6 +27,8 @@ public class ProductController {
     public ResponseEntity<Page<ProductResponseDTO>> getStorefrontProducts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String category,
+            @RequestParam(name = "productSize", required = false) String productSize,
+            @RequestParam(required = false) String color,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = "0") int page,
@@ -41,7 +43,7 @@ public class ProductController {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<ProductResponseDTO> products = productService.getStorefrontProducts(
-                keyword, category, minPrice, maxPrice, pageable
+                keyword, category, productSize, color, minPrice, maxPrice, pageable
         );
 
         return ResponseEntity.ok(products);

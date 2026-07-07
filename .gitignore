@@ -48,3 +48,6 @@ logs/
 *.env
 application-local.properties
 application-secret.properties
+
+# Uploaded files
+/uploads/

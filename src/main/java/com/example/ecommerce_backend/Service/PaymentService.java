@@ -76,6 +76,13 @@ public class PaymentService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy dữ liệu thanh toán"));
     }
 
+    // Lấy trạng thái thanh toán an toàn theo đơn hàng
+    public String getPaymentStatusByOrderId(Long orderId) {
+        return paymentRepository.findByOrderId(orderId)
+                .map(Payment::getStatus)
+                .orElse("PENDING");
+    }
+
     // Xem toàn bộ lịch sử thanh toán của một user
     public List<Payment> getPaymentsByUser(Long userId) {
         return paymentRepository.findByOrderUserId(userId);
@@ -83,7 +90,7 @@ public class PaymentService {
 
     //PAYOS
     @Transactional
-    public String createPayOSPayment(Long orderId) {
+    public java.util.Map<String, String> createPayOSPayment(Long orderId) {
 
         Payment payment = paymentRepository.findByOrderId(orderId).orElseThrow(()-> new RuntimeException("Không tìm thấy thông tin thanh toán của đơn hàng này"));
 
@@ -107,8 +114,11 @@ public class PaymentService {
             payment.setPaymentMethod("PAYOS");
             paymentRepository.save(payment);
 
-            // Trả link QR về cho Controller gửi tiếp cho Frontend
-            return response.getCheckoutUrl();
+            // Trả link QR và chuỗi VietQR về cho Controller gửi tiếp cho Frontend
+            java.util.Map<String, String> result = new java.util.HashMap<>();
+            result.put("checkoutUrl", response.getCheckoutUrl());
+            result.put("qrCode", response.getQrCode());
+            return result;
         } catch (Exception e) {
             throw new RuntimeException("Lỗi trong quá trình kết nối cổng thanh toán PayOS: " + e.getMessage());
         }

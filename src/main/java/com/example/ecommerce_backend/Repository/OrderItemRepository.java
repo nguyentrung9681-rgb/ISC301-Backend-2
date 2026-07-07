@@ -31,4 +31,14 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
            "GROUP BY oi.product.category " +
            "ORDER BY SUM(oi.price * oi.quantity) DESC")
     List<Object[]> getCategoryStats();
+    @Query("SELECT oi.product.id, SUM(oi.quantity) " +
+           "FROM OrderItem oi " +
+           "WHERE oi.order.status = 'DELIVERED' AND oi.product.id IN :productIds " +
+           "GROUP BY oi.product.id")
+    List<Object[]> getSoldCountsForProducts(@Param("productIds") List<Long> productIds);
+
+    @Query("SELECT COALESCE(SUM(oi.quantity), 0L) " +
+           "FROM OrderItem oi " +
+           "WHERE oi.order.status = 'DELIVERED' AND oi.product.id = :productId")
+    Long getSoldCountForProduct(@Param("productId") Long productId);
 }

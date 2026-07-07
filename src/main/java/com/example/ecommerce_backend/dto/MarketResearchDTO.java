@@ -256,4 +256,58 @@ public class MarketResearchDTO {
         public double getPercentage() { return percentage; }
         public void setPercentage(double percentage) { this.percentage = percentage; }
     }
+
+    // ---------------------------------------------------------------
+    // 8. Thống kê Phễu Chuyển Đổi (Conversion Funnel)
+    // ---------------------------------------------------------------
+    public static class FunnelStatsDTO {
+        private long viewsCount;
+        private long cartCount;
+        private long checkoutCount;
+        private long purchaseCount;
+        private double viewToCartRate;
+        private double cartToCheckoutRate;
+        private double checkoutToPurchaseRate;
+        private double overallConversionRate;
+
+        public FunnelStatsDTO() {}
+
+        public FunnelStatsDTO(long viewsCount, long cartCount, long checkoutCount, long purchaseCount,
+                              double viewToCartRate, double cartToCheckoutRate, double checkoutToPurchaseRate,
+                              double overallConversionRate) {
+            this.viewsCount = viewsCount;
+            this.cartCount = cartCount;
+            this.checkoutCount = checkoutCount;
+            this.purchaseCount = purchaseCount;
+            this.viewToCartRate = viewToCartRate;
+            this.cartToCheckoutRate = cartToCheckoutRate;
+            this.checkoutToPurchaseRate = checkoutToPurchaseRate;
+            this.overallConversionRate = overallConversionRate;
+        }
+
+        public long getViewsCount() { return viewsCount; }
+        public void setViewsCount(long viewsCount) { this.viewsCount = viewsCount; }
+
+        public long getCartCount() { return cartCount; }
+        public void setCartCount(long cartCount) { this.cartCount = cartCount; }
+
+        public long getCheckoutCount() { return checkoutCount; }
+        public void setCheckoutCount(long checkoutCount) { this.checkoutCount = checkoutCount; }
+
+        public long getPurchaseCount() { return purchaseCount; }
+        public void setPurchaseCount(long purchaseCount) { this.purchaseCount = purchaseCount; }
+
+        public double getViewToCartRate() { return viewToCartRate; }
+        public void setViewToCartRate(double viewToCartRate) { this.viewToCartRate = viewToCartRate; }
+
+        public double getCartToCheckoutRate() { return cartToCheckoutRate; }
+        public void setCartToCheckoutRate(double cartToCheckoutRate) { this.cartToCheckoutRate = cartToCheckoutRate; }
+
+        public double getCheckoutToPurchaseRate() { return checkoutToPurchaseRate; }
+        public void setCheckoutToPurchaseRate(double checkoutToPurchaseRate) { this.checkoutToPurchaseRate = checkoutToPurchaseRate; }
+
+        public double getOverallConversionRate() { return overallConversionRate; }
+        public void setOverallConversionRate(double overallConversionRate) { this.overallConversionRate = overallConversionRate; }
+    }
 }
+

@@ -11,6 +11,15 @@ import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    @Query("""
+           SELECT DISTINCT o FROM Order o
+           LEFT JOIN FETCH o.user
+           LEFT JOIN FETCH o.orderItems oi
+           LEFT JOIN FETCH oi.product
+           ORDER BY o.orderDate DESC
+           """)
+    List<Order> findAllWithDetails();
+
     List<Order> findByUserIdOrderByOrderDateDesc(Long userID); //lich su mua hang cua Client
 
     // ---------------------------------------------------------------
@@ -70,4 +79,3 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "ORDER BY COALESCE(SUM(o.totalAmount), 0) DESC")
     List<Object[]> getTopCustomers();
 }
-

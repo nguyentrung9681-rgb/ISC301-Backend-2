@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User,Long> {
     List<User> findByRole(Role role);
+    List<User> findByRoleIn(List<Role> roles);
     Optional<User> findByEmail(String email);
     @Query("""
             SELECT u FROM User u
@@ -23,5 +24,19 @@ public interface UserRepository extends JpaRepository<User,Long> {
     List<User> searchUsersByEmailOrPhone(
             @Param("keyword") String keyword,
             @Param("role") Role role
+    );
+
+    @Query("""
+            SELECT u FROM User u
+            WHERE u.role IN :roles
+            AND (
+                LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR u.phone LIKE CONCAT('%', :keyword, '%')
+                OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+            """)
+    List<User> searchUsersByEmailOrPhoneAndRoles(
+            @Param("keyword") String keyword,
+            @Param("roles") List<Role> roles
     );
 }
