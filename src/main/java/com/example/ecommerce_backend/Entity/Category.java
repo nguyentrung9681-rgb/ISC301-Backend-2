@@ -15,13 +15,13 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "code", nullable = false, unique = true, columnDefinition = "varchar(100)")
+    @Column(name = "code", nullable = false, unique = true, length = 100)
     private String code;
 
-    @Column(name = "name", nullable = false, columnDefinition = "nvarchar(150)")
+    @Column(name = "name", nullable = false, length = 150)
     private String name;
 
-    @Column(name = "is_active", nullable = false, columnDefinition = "bit")
+    @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
     public Long getId() {

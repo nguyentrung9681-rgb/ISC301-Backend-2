@@ -27,14 +27,14 @@ public class Order {
 
     private LocalDateTime orderDate;
     private BigDecimal totalAmount;
-    @Column(name = "shipping_address", length = 255, columnDefinition = "NVARCHAR(255)")
+    @Column(name = "shipping_address", length = 255)
     private String shippingAddress;
     private String phoneNumber;
 
-    @Column(name = "payment_method", length = 255, columnDefinition = "NVARCHAR(255)")
+    @Column(name = "payment_method", length = 255)
     private String paymentMethod;
 
-    @Column(name = "status", length = 255, columnDefinition = "NVARCHAR(255)")
+    @Column(name = "status", length = 255)
     private String status; //PENDING -> SHIPPING -> DELIVERED/ CANCELLED
 
     @JsonManagedReference

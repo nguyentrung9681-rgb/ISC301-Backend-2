@@ -25,7 +25,7 @@ public class Payment {
 
     private BigDecimal amount;
 
-    @Column(name = "payment_method", length = 255, columnDefinition = "NVARCHAR(255)")
+    @Column(name = "payment_method", length = 255)
     private String paymentMethod; //"COD", "BANK_TRANSFER", "VNPAY"
     private String status; //"PENDING", "PAID", "FAILED", "REFUNDED"
     private LocalDateTime createdAt;

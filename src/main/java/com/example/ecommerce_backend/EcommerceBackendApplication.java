@@ -19,7 +19,20 @@ public class EcommerceBackendApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
-		System.out.println("--- Kiem tra va xoa check constraint tren product_status ---");
+		try (var connection = jdbcTemplate.getDataSource().getConnection()) {
+			String dbName = connection.getMetaData().getDatabaseProductName();
+			if (dbName.toLowerCase().contains("microsoft") || dbName.toLowerCase().contains("sql server")) {
+				runSqlServerMigrations();
+			} else {
+				System.out.println("--- Database hien tai la: " + dbName + ". Bo qua cac cau lenh migration dac thu cua SQL Server. ---");
+			}
+		} catch (Exception e) {
+			System.err.println("Loi khi kiem tra loai database: " + e.getMessage());
+		}
+	}
+
+	private void runSqlServerMigrations() {
+		System.out.println("--- Kiem tra va xoa check constraint tren product_status (SQL Server) ---");
 		try {
 			String findConstraintSql = 
 				"SELECT cc.name FROM sys.check_constraints cc " +
@@ -36,7 +49,7 @@ public class EcommerceBackendApplication implements CommandLineRunner {
 			System.err.println("Loi khi tim/xoa check constraint: " + e.getMessage());
 		}
 
-		System.out.println("--- Chay lenh di chuyen database sua loi phong chu ---");
+		System.out.println("--- Chay lenh di chuyen database sua loi phong chu (SQL Server) ---");
 		String[] alterQueries = {
 			"ALTER TABLE orders ALTER COLUMN payment_method NVARCHAR(255)",
 			"ALTER TABLE orders ALTER COLUMN shipping_address NVARCHAR(255)",

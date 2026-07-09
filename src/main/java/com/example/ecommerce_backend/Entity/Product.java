@@ -13,7 +13,7 @@ public class Product {
     @Column(name = "product_name", length = 255, nullable = false)
     private String productName;
 
-    @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
@@ -31,16 +31,15 @@ public class Product {
     @Column(name = "category", length = 100)
     private String category;
 
-    @Column(name = "size", length = 255, columnDefinition = "NVARCHAR(255)")
+    @Column(name = "size", length = 255)
     private String size;
 
-    @Column(name = "color", length = 255, columnDefinition = "NVARCHAR(255)")
+    @Column(name = "color", length = 255)
     private String color;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "product_status", length = 20)
     private ProductStatus productStatus = ProductStatus.ACTIVE;
-
     public Product() {
     }
 

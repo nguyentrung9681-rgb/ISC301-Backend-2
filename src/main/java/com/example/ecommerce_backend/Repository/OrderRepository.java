@@ -46,12 +46,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * Doanh thu theo từng ngày trong khoảng thời gian (đơn DELIVERED).
      * Trả về [date_string, revenue, orderCount]
      */
-    @Query("SELECT FUNCTION('FORMAT', o.orderDate, 'yyyy-MM-dd') AS day, " +
+    @Query("SELECT FUNCTION('to_char', o.orderDate, 'YYYY-MM-DD') AS day, " +
            "COALESCE(SUM(o.totalAmount), 0), COUNT(o) " +
            "FROM Order o " +
            "WHERE o.status = 'DELIVERED' AND o.orderDate BETWEEN :start AND :end " +
-           "GROUP BY FUNCTION('FORMAT', o.orderDate, 'yyyy-MM-dd') " +
-           "ORDER BY FUNCTION('FORMAT', o.orderDate, 'yyyy-MM-dd') ASC")
+           "GROUP BY FUNCTION('to_char', o.orderDate, 'YYYY-MM-DD') " +
+           "ORDER BY FUNCTION('to_char', o.orderDate, 'YYYY-MM-DD') ASC")
     List<Object[]> getRevenueByDay(@Param("start") LocalDateTime start,
                                    @Param("end") LocalDateTime end);
 
@@ -59,13 +59,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * Doanh thu theo từng tháng trong năm (đơn DELIVERED).
      * Trả về [month_string e.g "2025-06", revenue, orderCount]
      */
-    @Query("SELECT FUNCTION('FORMAT', o.orderDate, 'yyyy-MM') AS month, " +
+    @Query("SELECT FUNCTION('to_char', o.orderDate, 'YYYY-MM') AS month, " +
            "COALESCE(SUM(o.totalAmount), 0), COUNT(o) " +
            "FROM Order o " +
            "WHERE o.status = 'DELIVERED' " +
-           "AND FUNCTION('YEAR', o.orderDate) = :year " +
-           "GROUP BY FUNCTION('FORMAT', o.orderDate, 'yyyy-MM') " +
-           "ORDER BY FUNCTION('FORMAT', o.orderDate, 'yyyy-MM') ASC")
+           "AND year(o.orderDate) = :year " +
+           "GROUP BY FUNCTION('to_char', o.orderDate, 'YYYY-MM') " +
+           "ORDER BY FUNCTION('to_char', o.orderDate, 'YYYY-MM') ASC")
     List<Object[]> getRevenueByMonth(@Param("year") int year);
 
     /**
