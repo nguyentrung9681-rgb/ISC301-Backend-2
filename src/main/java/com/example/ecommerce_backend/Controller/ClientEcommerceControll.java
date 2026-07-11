@@ -14,6 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.SimpleMailMessage;
 import java.util.List;
 
 @RestController
@@ -32,6 +35,34 @@ public class ClientEcommerceControll {
     private UserResolverHelper userResolverHelper;
     @Autowired
     private UserAddressRepository userAddressRepository;
+
+    @Autowired
+    private JavaMailSender mailSender;
+
+    @Value("${spring.mail.username:}")
+    private String fromEmail;
+
+    // ========== EMAIL TEST ENDPOINT ==========
+
+    @GetMapping("/test-email")
+    public ResponseEntity<?> testEmail(@RequestParam String to) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            if (fromEmail != null && !fromEmail.isEmpty()) {
+                message.setFrom(fromEmail);
+            }
+            message.setTo(to);
+            message.setSubject("[JustLife] Test Email Connection");
+            message.setText("Đây là email kiểm tra kết nối SMTP từ hệ thống JustLife!");
+            mailSender.send(message);
+            return ResponseEntity.ok("Email gửi thành công! Hãy kiểm tra hòm thư của bạn.");
+        } catch (Exception e) {
+            java.io.StringWriter sw = new java.io.StringWriter();
+            e.printStackTrace(new java.io.PrintWriter(sw));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Gửi email thất bại! Chi tiết lỗi:\n" + e.getMessage() + "\n\nStacktrace:\n" + sw.toString());
+        }
+    }
 
     // ========== GIỎ HÀNG ==========
 
