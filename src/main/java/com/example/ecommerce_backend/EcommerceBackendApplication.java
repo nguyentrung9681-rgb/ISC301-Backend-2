@@ -23,11 +23,35 @@ public class EcommerceBackendApplication implements CommandLineRunner {
 			String dbName = connection.getMetaData().getDatabaseProductName();
 			if (dbName.toLowerCase().contains("microsoft") || dbName.toLowerCase().contains("sql server")) {
 				runSqlServerMigrations();
+			} else if (dbName.toLowerCase().contains("postgresql")) {
+				runPostgresSqlSequenceReset();
 			} else {
 				System.out.println("--- Database hien tai la: " + dbName + ". Bo qua cac cau lenh migration dac thu cua SQL Server. ---");
 			}
 		} catch (Exception e) {
 			System.err.println("Loi khi kiem tra loai database: " + e.getMessage());
+		}
+	}
+
+	private void runPostgresSqlSequenceReset() {
+		System.out.println("--- Bat dau dong bo hoa Postgres sequence de tranh loi duplicate key (IDENTITY) ---");
+		String[] tables = {
+			"orders", "products", "users", "order_items", "payments", 
+			"vouchers", "product_reviews", "categories", "user_addresses", 
+			"carts", "cart_items", "password_reset_tokens", "funnel_events"
+		};
+		for (String table : tables) {
+			try {
+				String seqName = table + "_id_seq";
+				String resetSql = String.format(
+					"SELECT setval('%s', COALESCE((SELECT MAX(id) FROM %s), 0) + 1, false)", 
+					seqName, table
+				);
+				jdbcTemplate.execute(resetSql);
+				System.out.println("Da dong bo sequence: " + seqName);
+			} catch (Exception e) {
+				System.err.println("Loi khi dong bo sequence cho bang " + table + ": " + e.getMessage());
+			}
 		}
 	}
 
