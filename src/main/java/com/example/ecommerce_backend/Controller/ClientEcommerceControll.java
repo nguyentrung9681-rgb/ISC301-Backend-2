@@ -44,7 +44,7 @@ public class ClientEcommerceControll {
 
     // ========== EMAIL TEST ENDPOINT ==========
 
-    @GetMapping("/test-email")
+    @GetMapping({"/test-email", "/test_email"})
     public ResponseEntity<?> testEmail(@RequestParam String to) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
