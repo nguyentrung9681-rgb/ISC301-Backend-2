@@ -36,42 +36,61 @@ public class ClientEcommerceControll {
     @Autowired
     private UserAddressRepository userAddressRepository;
 
-    @Value("${resend.api-key:}")
-    private String resendApiKey;
+    @Value("${sendgrid.api-key:}")
+    private String sendGridApiKey;
 
-    @Value("${resend.from:onboarding@resend.dev}")
-    private String resendFrom;
+    @Value("${sendgrid.from:}")
+    private String sendGridFrom;
 
     // ========== EMAIL TEST ENDPOINT ==========
 
     @GetMapping({"/test-email", "/test_email"})
     public ResponseEntity<?> testEmail(@RequestParam String to) {
         try {
-            if (resendApiKey == null || resendApiKey.trim().isEmpty()) {
+            if (sendGridApiKey == null || sendGridApiKey.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Gửi email thất bại! Chưa cấu hình RESEND_API_KEY (biến môi trường rỗng hoặc chưa cập nhật).");
+                        .body("Gửi email thất bại! Chưa cấu hình SENDGRID_API_KEY (biến môi trường rỗng hoặc chưa cập nhật).");
+            }
+            if (sendGridFrom == null || sendGridFrom.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Gửi email thất bại! Chưa cấu hình SENDGRID_FROM_EMAIL (biến môi trường rỗng hoặc chưa cập nhật).");
             }
 
             org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(resendApiKey);
+            headers.setBearerAuth(sendGridApiKey);
 
             java.util.Map<String, Object> body = new java.util.HashMap<>();
-            body.put("from", resendFrom);
-            body.put("to", java.util.Collections.singletonList(to));
-            body.put("subject", "[JustLife] Test Connection via Resend API");
-            body.put("html", "<p>Đây là email kiểm tra kết nối Resend HTTP API từ hệ thống JustLife!</p>");
+
+            // personalizations
+            java.util.Map<String, Object> personalization = new java.util.HashMap<>();
+            java.util.Map<String, String> toRecipient = new java.util.HashMap<>();
+            toRecipient.put("email", to);
+            personalization.put("to", java.util.Collections.singletonList(toRecipient));
+            personalization.put("subject", "[JustLife] Test Connection via SendGrid API");
+            body.put("personalizations", java.util.Collections.singletonList(personalization));
+
+            // from
+            java.util.Map<String, String> fromSender = new java.util.HashMap<>();
+            fromSender.put("email", sendGridFrom);
+            body.put("from", fromSender);
+
+            // content
+            java.util.Map<String, String> contentObj = new java.util.HashMap<>();
+            contentObj.put("type", "text/html");
+            contentObj.put("value", "<p>Đây là email kiểm tra kết nối SendGrid HTTP API từ hệ thống JustLife!</p>");
+            body.put("content", java.util.Collections.singletonList(contentObj));
 
             org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(body, headers);
-            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
+            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity("https://api.sendgrid.com/v3/mail/send", entity, String.class);
 
-            return ResponseEntity.ok("Email gửi thành công qua Resend API! Phản hồi từ Resend: " + response.getBody());
+            return ResponseEntity.ok("Email gửi thành công qua SendGrid API! Mã phản hồi HTTP: " + response.getStatusCode());
         } catch (Exception e) {
             java.io.StringWriter sw = new java.io.StringWriter();
             e.printStackTrace(new java.io.PrintWriter(sw));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Gửi email qua Resend thất bại! Chi tiết lỗi:\n" + e.getMessage() + "\n\nStacktrace:\n" + sw.toString());
+                    .body("Gửi email qua SendGrid thất bại! Chi tiết lỗi:\n" + e.getMessage() + "\n\nStacktrace:\n" + sw.toString());
         }
     }
 

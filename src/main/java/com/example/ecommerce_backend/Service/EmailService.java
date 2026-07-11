@@ -26,16 +26,20 @@ public class EmailService {
     @Autowired
     private OrderRepository orderRepository;
 
-    @Value("${resend.api-key:}")
-    private String resendApiKey;
+    @Value("${sendgrid.api-key:}")
+    private String sendGridApiKey;
 
-    @Value("${resend.from:onboarding@resend.dev}")
-    private String resendFrom;
+    @Value("${sendgrid.from:}")
+    private String sendGridFrom;
 
-    // Helper method to send email via Resend API
-    private void sendResendEmail(String toEmail, String subject, String htmlContent, byte[] qrCodeImage) {
-        if (resendApiKey == null || resendApiKey.trim().isEmpty()) {
-            System.err.println("[RESEND] API Key is empty! Cannot send email.");
+    // Helper method to send email via SendGrid API
+    private void sendSendGridEmail(String toEmail, String subject, String htmlContent, byte[] qrCodeImage) {
+        if (sendGridApiKey == null || sendGridApiKey.trim().isEmpty()) {
+            System.err.println("[SENDGRID] API Key is empty! Cannot send email.");
+            return;
+        }
+        if (sendGridFrom == null || sendGridFrom.trim().isEmpty()) {
+            System.err.println("[SENDGRID] From email is empty! Cannot send email.");
             return;
         }
 
@@ -43,27 +47,45 @@ public class EmailService {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(resendApiKey);
+            headers.setBearerAuth(sendGridApiKey);
 
             Map<String, Object> body = new HashMap<>();
-            body.put("from", resendFrom);
-            body.put("to", Collections.singletonList(toEmail));
-            body.put("subject", subject);
-            body.put("html", htmlContent);
 
+            // personalizations
+            Map<String, Object> personalization = new HashMap<>();
+            Map<String, String> toRecipient = new HashMap<>();
+            toRecipient.put("email", toEmail);
+            personalization.put("to", Collections.singletonList(toRecipient));
+            personalization.put("subject", subject);
+            body.put("personalizations", Collections.singletonList(personalization));
+
+            // from
+            Map<String, String> fromSender = new HashMap<>();
+            fromSender.put("email", sendGridFrom);
+            body.put("from", fromSender);
+
+            // content
+            Map<String, String> contentObj = new HashMap<>();
+            contentObj.put("type", "text/html");
+            contentObj.put("value", htmlContent);
+            body.put("content", Collections.singletonList(contentObj));
+
+            // attachments
             if (qrCodeImage != null) {
                 Map<String, Object> attachment = new HashMap<>();
-                attachment.put("filename", "qrcode.png");
                 attachment.put("content", Base64.getEncoder().encodeToString(qrCodeImage));
-                attachment.put("contentId", "qrCodeImageInline"); // matching the cid
+                attachment.put("filename", "qrcode.png");
+                attachment.put("type", "image/png");
+                attachment.put("disposition", "inline");
+                attachment.put("content_id", "qrCodeImageInline");
                 body.put("attachments", Collections.singletonList(attachment));
             }
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
-            System.out.println("[RESEND] Email sent successfully to " + toEmail + ". Response: " + response.getBody());
+            ResponseEntity<String> response = restTemplate.postForEntity("https://api.sendgrid.com/v3/mail/send", entity, String.class);
+            System.out.println("[SENDGRID] Email sent successfully to " + toEmail + ". Status: " + response.getStatusCode());
         } catch (Exception e) {
-            System.err.println("[RESEND_ERROR] Failed to send email to " + toEmail + ": " + e.getMessage());
+            System.err.println("[SENDGRID_ERROR] Failed to send email to " + toEmail + ": " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -75,7 +97,7 @@ public class EmailService {
                 + "<p><a href=\"" + resetLink + "\">" + resetLink + "</a></p>"
                 + "<p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>"
                 + "<p>Trân trọng,<br>Đội ngũ vận hành JustLife.</p>";
-        sendResendEmail(toEmail, "[JustLife] Yêu cầu đặt lại mật khẩu tài khoản của bạn", html, null);
+        sendSendGridEmail(toEmail, "[JustLife] Yêu cầu đặt lại mật khẩu tài khoản của bạn", html, null);
     }
 
     // Hàm helper xây dựng bảng chi tiết sản phẩm HTML dùng chung
@@ -153,7 +175,7 @@ public class EmailService {
             htmlContent.append("</div>");
             htmlContent.append("</div>");
 
-            sendResendEmail(toEmail, "[JustLife] Hóa đơn thanh toán thành công - Đơn hàng #" + order.getId(), htmlContent.toString(), qrCodeImage);
+            sendSendGridEmail(toEmail, "[JustLife] Hóa đơn thanh toán thành công - Đơn hàng #" + order.getId(), htmlContent.toString(), qrCodeImage);
         } catch (Exception e) {
             System.err.println("Gặp lỗi khi xử lý gửi email hóa đơn: " + e.getMessage());
             e.printStackTrace();
@@ -189,7 +211,7 @@ public class EmailService {
             htmlContent.append("<p style='font-size: 13px; color: #7f8c8d; text-align: center;'>Chúng tôi sẽ thông báo cho bạn khi đơn hàng được bàn giao cho đối tác vận chuyển.</p>");
             htmlContent.append("</div>");
 
-            sendResendEmail(toEmail, "[JustLife] Xác nhận đơn hàng mới - Đơn hàng #" + order.getId(), htmlContent.toString(), null);
+            sendSendGridEmail(toEmail, "[JustLife] Xác nhận đơn hàng mới - Đơn hàng #" + order.getId(), htmlContent.toString(), null);
         } catch (Exception e) {
             System.err.println("Lỗi khi gửi email xác nhận đặt hàng: " + e.getMessage());
             e.printStackTrace();
@@ -230,7 +252,7 @@ public class EmailService {
 
             htmlContent.append("</div>");
 
-            sendResendEmail(toEmail, "[JustLife] Cập nhật trạng thái đơn hàng #" + order.getId() + " - " + statusVi, htmlContent.toString(), null);
+            sendSendGridEmail(toEmail, "[JustLife] Cập nhật trạng thái đơn hàng #" + order.getId() + " - " + statusVi, htmlContent.toString(), null);
         } catch (Exception e) {
             System.err.println("Lỗi khi gửi email cập nhật trạng thái đơn hàng: " + e.getMessage());
             e.printStackTrace();
@@ -262,7 +284,7 @@ public class EmailService {
 
             htmlContent.append("</div>");
 
-            sendResendEmail(toEmail, "[JustLife] Thông báo hủy đơn hàng #" + order.getId(), htmlContent.toString(), null);
+            sendSendGridEmail(toEmail, "[JustLife] Thông báo hủy đơn hàng #" + order.getId(), htmlContent.toString(), null);
         } catch (Exception e) {
             System.err.println("Lỗi khi gửi email báo hủy đơn hàng: " + e.getMessage());
             e.printStackTrace();
