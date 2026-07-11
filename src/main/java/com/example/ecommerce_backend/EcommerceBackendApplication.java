@@ -5,9 +5,11 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.EnableAsync;
 import java.util.List;
 
 @SpringBootApplication
+@EnableAsync
 public class EcommerceBackendApplication implements CommandLineRunner {
 
 	@Autowired
