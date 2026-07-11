@@ -3,44 +3,79 @@ package com.example.ecommerce_backend.Service;
 import com.example.ecommerce_backend.Entity.Order;
 import com.example.ecommerce_backend.Entity.OrderItem;
 import com.example.ecommerce_backend.Repository.OrderRepository;
-import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Collections;
+import java.util.Base64;
 
 @Service
 @Async
 public class EmailService {
-    @Autowired
-    private JavaMailSender mailSender;
 
     @Autowired
     private OrderRepository orderRepository;
 
-    @Value("${spring.mail.username:}")
-    private String fromEmail;
+    @Value("${resend.api-key:}")
+    private String resendApiKey;
+
+    @Value("${resend.from:onboarding@resend.dev}")
+    private String resendFrom;
+
+    // Helper method to send email via Resend API
+    private void sendResendEmail(String toEmail, String subject, String htmlContent, byte[] qrCodeImage) {
+        if (resendApiKey == null || resendApiKey.trim().isEmpty()) {
+            System.err.println("[RESEND] API Key is empty! Cannot send email.");
+            return;
+        }
+
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(resendApiKey);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("from", resendFrom);
+            body.put("to", Collections.singletonList(toEmail));
+            body.put("subject", subject);
+            body.put("html", htmlContent);
+
+            if (qrCodeImage != null) {
+                Map<String, Object> attachment = new HashMap<>();
+                attachment.put("filename", "qrcode.png");
+                attachment.put("content", Base64.getEncoder().encodeToString(qrCodeImage));
+                attachment.put("contentId", "qrCodeImageInline"); // matching the cid
+                body.put("attachments", Collections.singletonList(attachment));
+            }
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
+            System.out.println("[RESEND] Email sent successfully to " + toEmail + ". Response: " + response.getBody());
+        } catch (Exception e) {
+            System.err.println("[RESEND_ERROR] Failed to send email to " + toEmail + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     public void sendResetPasswordEmail(String toEmail, String resetLink) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        if (fromEmail != null && !fromEmail.isEmpty()) {
-            message.setFrom(fromEmail);
-        }
-        message.setTo(toEmail);
-        message.setSubject("[JustLife] Yêu cầu đặt lại mật khẩu tài khoản của bạn");
-        message.setText("Chào bạn,\n\n"
-                + "Chúng tôi nhận được yêu cầu khôi phục mật khẩu từ bạn.\n"
-                + "Vui lòng nhấp vào đường liên kết dưới đây để tiến hành thiết lập mật khẩu mới (Mã có hiệu lực trong 15 phút):\n"
-                + resetLink + "\n\n"
-                + "Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.\n"
-                + "Trân trọng,\nĐội ngũ vận hành JustLife.");
-
-        mailSender.send(message);
+        String html = "<p>Chào bạn,</p>"
+                + "<p>Chúng tôi nhận được yêu cầu khôi phục mật khẩu từ bạn.</p>"
+                + "<p>Vui lòng nhấp vào đường liên kết dưới đây để tiến hành thiết lập mật khẩu mới (Mã có hiệu lực trong 15 phút):</p>"
+                + "<p><a href=\"" + resetLink + "\">" + resetLink + "</a></p>"
+                + "<p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>"
+                + "<p>Trân trọng,<br>Đội ngũ vận hành JustLife.</p>";
+        sendResendEmail(toEmail, "[JustLife] Yêu cầu đặt lại mật khẩu tài khoản của bạn", html, null);
     }
 
     // Hàm helper xây dựng bảng chi tiết sản phẩm HTML dùng chung
@@ -93,14 +128,6 @@ public class EmailService {
         try {
             Order order = orderRepository.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            if (fromEmail != null && !fromEmail.isEmpty()) {
-                helper.setFrom(fromEmail);
-            }
-
-            helper.setTo(toEmail);
-            helper.setSubject("[JustLife] Hóa đơn thanh toán thành công - Đơn hàng #" + order.getId());
 
             StringBuilder htmlContent = new StringBuilder();
             htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
@@ -126,12 +153,10 @@ public class EmailService {
             htmlContent.append("</div>");
             htmlContent.append("</div>");
 
-            helper.setText(htmlContent.toString(), true);
-            helper.addInline("qrCodeImageInline", new ByteArrayResource(qrCodeImage), "image/png");
-
-            mailSender.send(mimeMessage);
+            sendResendEmail(toEmail, "[JustLife] Hóa đơn thanh toán thành công - Đơn hàng #" + order.getId(), htmlContent.toString(), qrCodeImage);
         } catch (Exception e) {
-            throw new RuntimeException("Gặp lỗi khi gửi email hóa đơn: " + e.getMessage());
+            System.err.println("Gặp lỗi khi xử lý gửi email hóa đơn: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -141,14 +166,6 @@ public class EmailService {
         try {
             Order order = orderRepository.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            if (fromEmail != null && !fromEmail.isEmpty()) {
-                helper.setFrom(fromEmail);
-            }
-
-            helper.setTo(toEmail);
-            helper.setSubject("[JustLife] Xác nhận đơn hàng mới - Đơn hàng #" + order.getId());
 
             StringBuilder htmlContent = new StringBuilder();
             htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
@@ -172,8 +189,7 @@ public class EmailService {
             htmlContent.append("<p style='font-size: 13px; color: #7f8c8d; text-align: center;'>Chúng tôi sẽ thông báo cho bạn khi đơn hàng được bàn giao cho đối tác vận chuyển.</p>");
             htmlContent.append("</div>");
 
-            helper.setText(htmlContent.toString(), true);
-            mailSender.send(mimeMessage);
+            sendResendEmail(toEmail, "[JustLife] Xác nhận đơn hàng mới - Đơn hàng #" + order.getId(), htmlContent.toString(), null);
         } catch (Exception e) {
             System.err.println("Lỗi khi gửi email xác nhận đặt hàng: " + e.getMessage());
             e.printStackTrace();
@@ -186,17 +202,9 @@ public class EmailService {
         try {
             Order order = orderRepository.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            if (fromEmail != null && !fromEmail.isEmpty()) {
-                helper.setFrom(fromEmail);
-            }
 
             String statusVi = newStatus.equalsIgnoreCase("SHIPPING") ? "ĐANG GIAO HÀNG" : "ĐÃ GIAO THÀNH CÔNG";
             String badgeColor = newStatus.equalsIgnoreCase("SHIPPING") ? "#2980b9" : "#27ae60";
-
-            helper.setTo(toEmail);
-            helper.setSubject("[JustLife] Cập nhật trạng thái đơn hàng #" + order.getId() + " - " + statusVi);
 
             StringBuilder htmlContent = new StringBuilder();
             htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
@@ -222,8 +230,7 @@ public class EmailService {
 
             htmlContent.append("</div>");
 
-            helper.setText(htmlContent.toString(), true);
-            mailSender.send(mimeMessage);
+            sendResendEmail(toEmail, "[JustLife] Cập nhật trạng thái đơn hàng #" + order.getId() + " - " + statusVi, htmlContent.toString(), null);
         } catch (Exception e) {
             System.err.println("Lỗi khi gửi email cập nhật trạng thái đơn hàng: " + e.getMessage());
             e.printStackTrace();
@@ -236,14 +243,6 @@ public class EmailService {
         try {
             Order order = orderRepository.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            if (fromEmail != null && !fromEmail.isEmpty()) {
-                helper.setFrom(fromEmail);
-            }
-
-            helper.setTo(toEmail);
-            helper.setSubject("[JustLife] Thông báo hủy đơn hàng #" + order.getId());
 
             StringBuilder htmlContent = new StringBuilder();
             htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
@@ -263,8 +262,7 @@ public class EmailService {
 
             htmlContent.append("</div>");
 
-            helper.setText(htmlContent.toString(), true);
-            mailSender.send(mimeMessage);
+            sendResendEmail(toEmail, "[JustLife] Thông báo hủy đơn hàng #" + order.getId(), htmlContent.toString(), null);
         } catch (Exception e) {
             System.err.println("Lỗi khi gửi email báo hủy đơn hàng: " + e.getMessage());
             e.printStackTrace();

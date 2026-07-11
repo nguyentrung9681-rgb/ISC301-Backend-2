@@ -36,31 +36,42 @@ public class ClientEcommerceControll {
     @Autowired
     private UserAddressRepository userAddressRepository;
 
-    @Autowired
-    private JavaMailSender mailSender;
+    @Value("${resend.api-key:}")
+    private String resendApiKey;
 
-    @Value("${spring.mail.username:}")
-    private String fromEmail;
+    @Value("${resend.from:onboarding@resend.dev}")
+    private String resendFrom;
 
     // ========== EMAIL TEST ENDPOINT ==========
 
     @GetMapping({"/test-email", "/test_email"})
     public ResponseEntity<?> testEmail(@RequestParam String to) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            if (fromEmail != null && !fromEmail.isEmpty()) {
-                message.setFrom(fromEmail);
+            if (resendApiKey == null || resendApiKey.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Gửi email thất bại! Chưa cấu hình RESEND_API_KEY (biến môi trường rỗng hoặc chưa cập nhật).");
             }
-            message.setTo(to);
-            message.setSubject("[JustLife] Test Email Connection");
-            message.setText("Đây là email kiểm tra kết nối SMTP từ hệ thống JustLife!");
-            mailSender.send(message);
-            return ResponseEntity.ok("Email gửi thành công! Hãy kiểm tra hòm thư của bạn.");
+
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(resendApiKey);
+
+            java.util.Map<String, Object> body = new java.util.HashMap<>();
+            body.put("from", resendFrom);
+            body.put("to", java.util.Collections.singletonList(to));
+            body.put("subject", "[JustLife] Test Connection via Resend API");
+            body.put("html", "<p>Đây là email kiểm tra kết nối Resend HTTP API từ hệ thống JustLife!</p>");
+
+            org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(body, headers);
+            org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
+
+            return ResponseEntity.ok("Email gửi thành công qua Resend API! Phản hồi từ Resend: " + response.getBody());
         } catch (Exception e) {
             java.io.StringWriter sw = new java.io.StringWriter();
             e.printStackTrace(new java.io.PrintWriter(sw));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Gửi email thất bại! Chi tiết lỗi:\n" + e.getMessage() + "\n\nStacktrace:\n" + sw.toString());
+                    .body("Gửi email qua Resend thất bại! Chi tiết lỗi:\n" + e.getMessage() + "\n\nStacktrace:\n" + sw.toString());
         }
     }
 
