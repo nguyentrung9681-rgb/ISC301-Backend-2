@@ -90,19 +90,30 @@ public class PaymentService {
 
     //PAYOS
     @Transactional
-    public java.util.Map<String, String> createPayOSPayment(Long orderId) {
+    public java.util.Map<String, String> createPayOSPayment(Long orderId, String originUrl) {
 
         Payment payment = paymentRepository.findByOrderId(orderId).orElseThrow(()-> new RuntimeException("Không tìm thấy thông tin thanh toán của đơn hàng này"));
 
         Long payosOrderCode = System.currentTimeMillis() / 1000;
         Long totalAmount = payment.getAmount().longValue();
 
+        String finalReturnUrl = returnUrl;
+        String finalCancelUrl = cancelUrl;
+        if (originUrl != null && !originUrl.trim().isEmpty()) {
+            String base = originUrl.trim();
+            if (base.endsWith("/")) {
+                base = base.substring(0, base.length() - 1);
+            }
+            finalReturnUrl = base + "/payment/success";
+            finalCancelUrl = base + "/payment/cancel";
+        }
+
         CreatePaymentLinkRequest paymentRequest = CreatePaymentLinkRequest.builder()
                 .orderCode(payosOrderCode)
                 .amount(totalAmount)
                 .description("Thanh toan don hang #" + orderId)
-                .returnUrl(returnUrl)
-                .cancelUrl(cancelUrl)
+                .returnUrl(finalReturnUrl)
+                .cancelUrl(finalCancelUrl)
                 .build();
         try {
             // Gọi API chính thức sang hệ thống PayOS

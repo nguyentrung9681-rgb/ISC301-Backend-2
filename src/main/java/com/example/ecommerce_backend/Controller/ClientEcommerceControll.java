@@ -154,8 +154,12 @@ public class ClientEcommerceControll {
     // ========== PAYOS ==========
 
     @PostMapping("/payment/payos/{orderId}")
-    public ResponseEntity<ApiResponse<java.util.Map<String, String>>> generatePayOSLink(@PathVariable Long orderId) {
-        java.util.Map<String, String> paymentData = paymentService.createPayOSPayment(orderId);
+    public ResponseEntity<ApiResponse<java.util.Map<String, String>>> generatePayOSLink(@PathVariable Long orderId, HttpServletRequest request) {
+        String origin = request.getHeader("Origin");
+        if (origin == null || origin.trim().isEmpty()) {
+            origin = request.getHeader("Referer");
+        }
+        java.util.Map<String, String> paymentData = paymentService.createPayOSPayment(orderId, origin);
         return ResponseEntity.ok(ApiResponse.ok("Link thanh toán đã được tạo", paymentData));
     }
 
