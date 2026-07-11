@@ -9,6 +9,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,8 +23,14 @@ public class EmailService {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Value("${spring.mail.username:}")
+    private String fromEmail;
+
     public void sendResetPasswordEmail(String toEmail, String resetLink) {
         SimpleMailMessage message = new SimpleMailMessage();
+        if (fromEmail != null && !fromEmail.isEmpty()) {
+            message.setFrom(fromEmail);
+        }
         message.setTo(toEmail);
         message.setSubject("[JustLife] Yêu cầu đặt lại mật khẩu tài khoản của bạn");
         message.setText("Chào bạn,\n\n"
@@ -88,6 +95,9 @@ public class EmailService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            if (fromEmail != null && !fromEmail.isEmpty()) {
+                helper.setFrom(fromEmail);
+            }
 
             helper.setTo(toEmail);
             helper.setSubject("[JustLife] Hóa đơn thanh toán thành công - Đơn hàng #" + order.getId());
@@ -133,6 +143,9 @@ public class EmailService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            if (fromEmail != null && !fromEmail.isEmpty()) {
+                helper.setFrom(fromEmail);
+            }
 
             helper.setTo(toEmail);
             helper.setSubject("[JustLife] Xác nhận đơn hàng mới - Đơn hàng #" + order.getId());
@@ -175,6 +188,9 @@ public class EmailService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            if (fromEmail != null && !fromEmail.isEmpty()) {
+                helper.setFrom(fromEmail);
+            }
 
             String statusVi = newStatus.equalsIgnoreCase("SHIPPING") ? "ĐANG GIAO HÀNG" : "ĐÃ GIAO THÀNH CÔNG";
             String badgeColor = newStatus.equalsIgnoreCase("SHIPPING") ? "#2980b9" : "#27ae60";
@@ -222,6 +238,9 @@ public class EmailService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            if (fromEmail != null && !fromEmail.isEmpty()) {
+                helper.setFrom(fromEmail);
+            }
 
             helper.setTo(toEmail);
             helper.setSubject("[JustLife] Thông báo hủy đơn hàng #" + order.getId());
