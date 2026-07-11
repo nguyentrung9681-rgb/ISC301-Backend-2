@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import vn.payos.PayOS;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
@@ -71,16 +72,40 @@ public class PaymentService {
     }
 
     // Xem thông tin thanh toán theo đơn hàng
+    @Transactional
     public Payment getPaymentByOrder(Long orderId) {
-        return paymentRepository.findByOrderId(orderId)
+        Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy dữ liệu thanh toán"));
+        return syncPaymentWithPayOS(payment);
     }
 
     // Lấy trạng thái thanh toán an toàn theo đơn hàng
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String getPaymentStatusByOrderId(Long orderId) {
-        return paymentRepository.findByOrderId(orderId)
-                .map(Payment::getStatus)
-                .orElse("PENDING");
+        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
+        if (payment == null) {
+            return "PENDING";
+        }
+        payment = syncPaymentWithPayOS(payment);
+        return payment.getStatus();
+    }
+
+    private Payment syncPaymentWithPayOS(Payment payment) {
+        if (payment != null && "PENDING".equals(payment.getStatus()) && payment.getPayosOrderCode() != null) {
+            try {
+                vn.payos.model.v2.paymentRequests.PaymentLink payosData = payOS.paymentRequests().get(payment.getPayosOrderCode());
+                if (vn.payos.model.v2.paymentRequests.PaymentLinkStatus.PAID == payosData.getStatus()) {
+                    payment.setStatus("PAID");
+                    payment.setUpdatedAt(LocalDateTime.now());
+                    Payment savedPayment = paymentRepository.save(payment);
+                    triggerOrderInvoiceEmail(savedPayment.getOrder());
+                    return savedPayment;
+                }
+            } catch (Exception e) {
+                System.err.println("Lỗi khi đồng bộ trạng thái từ PayOS cho payosOrderCode " + payment.getPayosOrderCode() + ": " + e.getMessage());
+            }
+        }
+        return payment;
     }
 
     // Xem toàn bộ lịch sử thanh toán của một user
@@ -161,7 +186,7 @@ public class PaymentService {
             byte[] qrImage = qrCodeService.generateQRCodeImage(qrData, 200, 200);
 
             // Gửi email hóa đơn trực tiếp cho khách hàng
-            emailService.sendOrderConfirmationEmail(order.getUser().getEmail(), order, qrImage);
+            emailService.sendOrderConfirmationEmail(order.getUser().getEmail(), order.getId(), qrImage);
         } catch (Exception e) {
             // Log warning or print stack trace instead of rolling back the entire transaction!
             System.err.println("Lỗi khi gửi email hóa đơn cho đơn hàng #" + order.getId() + ": " + e.getMessage());

@@ -2,6 +2,7 @@ package com.example.ecommerce_backend.Service;
 
 import com.example.ecommerce_backend.Entity.Order;
 import com.example.ecommerce_backend.Entity.OrderItem;
+import com.example.ecommerce_backend.Repository.OrderRepository;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -10,12 +11,16 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Async
 public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     public void sendResetPasswordEmail(String toEmail, String resetLink) {
         SimpleMailMessage message = new SimpleMailMessage();
@@ -76,8 +81,11 @@ public class EmailService {
     }
 
     // 🌟 HÀM NÂNG CẤP: Gửi Email Hóa đơn HTML kèm mã QR Đơn hàng khi đã THANH TOÁN (PAID)
-    public void sendOrderConfirmationEmail(String toEmail, Order order, byte[] qrCodeImage) {
+    @Transactional(readOnly = true)
+    public void sendOrderConfirmationEmail(String toEmail, Long orderId, byte[] qrCodeImage) {
         try {
+            Order order = orderRepository.findByIdWithDetails(orderId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
@@ -118,8 +126,11 @@ public class EmailService {
     }
 
     // 🌟 Gửi Email xác nhận đơn hàng mới (PENDING)
-    public void sendOrderPendingEmail(String toEmail, Order order) {
+    @Transactional(readOnly = true)
+    public void sendOrderPendingEmail(String toEmail, Long orderId) {
         try {
+            Order order = orderRepository.findByIdWithDetails(orderId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
@@ -157,8 +168,11 @@ public class EmailService {
     }
 
     // 🌟 Gửi Email thông báo cập nhật trạng thái giao hàng (SHIPPING hoặc DELIVERED)
-    public void sendOrderStatusUpdateEmail(String toEmail, Order order, String newStatus) {
+    @Transactional(readOnly = true)
+    public void sendOrderStatusUpdateEmail(String toEmail, Long orderId, String newStatus) {
         try {
+            Order order = orderRepository.findByIdWithDetails(orderId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
@@ -201,8 +215,11 @@ public class EmailService {
     }
 
     // 🌟 Gửi Email thông báo hủy đơn hàng (CANCELLED)
-    public void sendOrderCancelledEmail(String toEmail, Order order) {
+    @Transactional(readOnly = true)
+    public void sendOrderCancelledEmail(String toEmail, Long orderId) {
         try {
+            Order order = orderRepository.findByIdWithDetails(orderId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 

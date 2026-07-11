@@ -20,6 +20,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            """)
     List<Order> findAllWithDetails();
 
+    @Query("""
+           SELECT o FROM Order o
+           LEFT JOIN FETCH o.user
+           LEFT JOIN FETCH o.orderItems oi
+           LEFT JOIN FETCH oi.product
+           WHERE o.id = :id
+           """)
+    java.util.Optional<Order> findByIdWithDetails(@Param("id") Long id);
+
     List<Order> findByUserIdOrderByOrderDateDesc(Long userID); //lich su mua hang cua Client
 
     // ---------------------------------------------------------------

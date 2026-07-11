@@ -80,7 +80,7 @@ public class OrderService {
 
         // Gửi email xác nhận đơn hàng mới (PENDING)
         try {
-            emailService.sendOrderPendingEmail(user.getEmail(), savedOrder);
+            emailService.sendOrderPendingEmail(user.getEmail(), savedOrder.getId());
         } catch (Exception e) {
             System.err.println("Lỗi gửi email xác nhận đặt hàng: " + e.getMessage());
         }
@@ -124,7 +124,7 @@ public class OrderService {
 
         // Gửi email báo hủy đơn hàng
         try {
-            emailService.sendOrderCancelledEmail(cancelledOrder.getUser().getEmail(), cancelledOrder);
+            emailService.sendOrderCancelledEmail(cancelledOrder.getUser().getEmail(), cancelledOrder.getId());
         } catch (Exception e) {
             System.err.println("Lỗi gửi email báo hủy đơn hàng: " + e.getMessage());
         }
@@ -149,7 +149,7 @@ public class OrderService {
         if (!oldStatus.equalsIgnoreCase(formattedStatus) &&
             (formattedStatus.equals("SHIPPING") || formattedStatus.equals("DELIVERED"))) {
             try {
-                emailService.sendOrderStatusUpdateEmail(savedOrder.getUser().getEmail(), savedOrder, formattedStatus);
+                emailService.sendOrderStatusUpdateEmail(savedOrder.getUser().getEmail(), savedOrder.getId(), formattedStatus);
             } catch (Exception e) {
                 System.err.println("Lỗi gửi email cập nhật trạng thái đơn hàng: " + e.getMessage());
             }
@@ -255,7 +255,7 @@ public class OrderService {
 
         // Gửi email xác nhận đơn hàng mới (PENDING)
         try {
-            emailService.sendOrderPendingEmail(user.getEmail(), savedOrder);
+            emailService.sendOrderPendingEmail(user.getEmail(), savedOrder.getId());
         } catch (Exception e) {
             System.err.println("Lỗi gửi email xác nhận đặt hàng: " + e.getMessage());
         }
