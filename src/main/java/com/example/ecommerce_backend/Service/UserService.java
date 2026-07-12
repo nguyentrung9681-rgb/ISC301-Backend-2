@@ -213,6 +213,21 @@ public class UserService {
     }
 
     @Transactional
+    public UserResponseDTO updateUserRole(Long userId, Role role) {
+        if (role == null) {
+            throw new RuntimeException("Role cannot be null");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        user.setRole(role);
+        User updatedUser = userRepository.save(user);
+
+        return new UserResponseDTO(updatedUser);
+    }
+
+    @Transactional
     public UserResponseDTO registerManager(RegisterManagerRequestDTO request) {
         // 1. Kiểm tra dữ liệu bắt buộc không được để trống
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {

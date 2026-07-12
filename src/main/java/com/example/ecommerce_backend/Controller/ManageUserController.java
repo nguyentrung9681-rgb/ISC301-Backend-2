@@ -5,6 +5,7 @@ import com.example.ecommerce_backend.Service.UserService;
 import com.example.ecommerce_backend.dto.RegisterManagerRequestDTO;
 import com.example.ecommerce_backend.dto.UpdateUserStatusRequest;
 import com.example.ecommerce_backend.dto.UserResponseDTO;
+import com.example.ecommerce_backend.dto.UpdateUserRoleRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,6 +41,21 @@ public class ManageUserController {
             @RequestBody UpdateUserStatusRequest request
     ) {
         return userService.updateUserStatus(id, request.getStatus());
+    }
+
+    // Update user role
+    // PATCH: http://localhost:8080/api/manager/users/{id}/role
+    @PatchMapping("/{id}/role")
+    public ResponseEntity<?> updateUserRole(
+            @PathVariable Long id,
+            @RequestBody UpdateUserRoleRequest request
+    ) {
+        try {
+            UserResponseDTO updatedUser = userService.updateUserRole(id, request.getRole());
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
     }
 
     //post /api/manager/users/create-manager -> nhận request khởi tạo tài khoản manager
