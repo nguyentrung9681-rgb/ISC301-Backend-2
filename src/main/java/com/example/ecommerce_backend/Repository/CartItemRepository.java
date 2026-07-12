@@ -9,5 +9,7 @@ import java.util.Optional;
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<CartItem> findByUserIdAndIsWishlist(Long userId, boolean isWishlist);
     Optional<CartItem> findByUserIdAndProductIdAndIsWishlist(Long userId, Long productId, boolean isWishlist);
+    Optional<CartItem> findByUserIdAndProductIdAndSelectedSizeAndSelectedColorAndIsWishlist(
+            Long userId, Long productId, String selectedSize, String selectedColor, boolean isWishlist);
     void deleteByUserIdAndIsWishlist(Long userId, boolean isWishlist);
 }

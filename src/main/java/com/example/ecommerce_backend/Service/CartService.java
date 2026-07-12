@@ -26,14 +26,14 @@ public class CartService {
         return cartItemRepository.findByUserIdAndIsWishlist(user.getId(), isWishlist);
     }
 
-    public CartItem addItem(User user, Long productId, int quantity, boolean isWishlist) {
+    public CartItem addItem(User user, Long productId, int quantity, String size, String color, boolean isWishlist) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("San pham khong ton tai"));
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseGet(() -> cartRepository.save(new Cart(null, user)));
 
-        Optional<CartItem> existing = cartItemRepository.findByUserIdAndProductIdAndIsWishlist(
-                user.getId(), productId, isWishlist);
+        Optional<CartItem> existing = cartItemRepository.findByUserIdAndProductIdAndSelectedSizeAndSelectedColorAndIsWishlist(
+                user.getId(), productId, size, color, isWishlist);
         if (existing.isPresent()) {
             CartItem item = existing.get();
             item.setCart(cart);
@@ -48,6 +48,8 @@ public class CartService {
         newItem.setUser(user);
         newItem.setProduct(product);
         newItem.setQuantity(isWishlist ? 1 : quantity);
+        newItem.setSelectedSize(size);
+        newItem.setSelectedColor(color);
         newItem.setWishlist(isWishlist);
         return cartItemRepository.save(newItem);
     }

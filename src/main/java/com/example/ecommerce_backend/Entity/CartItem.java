@@ -37,4 +37,6 @@ public class CartItem {
 
     private int quantity;
     private boolean isWishlist = false;
+    private String selectedSize;
+    private String selectedColor;
 }

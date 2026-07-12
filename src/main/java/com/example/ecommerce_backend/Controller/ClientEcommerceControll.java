@@ -105,11 +105,16 @@ public class ClientEcommerceControll {
     }
 
     @PostMapping("/cart/add")
-    public ResponseEntity<ApiResponse<?>> addToCart(@RequestParam Long productId, @RequestParam int quantity, HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<?>> addToCart(
+            @RequestParam Long productId,
+            @RequestParam int quantity,
+            @RequestParam(required = false) String size,
+            @RequestParam(required = false) String color,
+            HttpServletRequest request) {
         User currentUser = userResolverHelper.resolveCurrentUser(request);
         if (currentUser == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Yêu cầu đăng nhập"));
-        return ResponseEntity.ok(ApiResponse.ok(cartService.addItem(currentUser, productId, quantity, false)));
+        return ResponseEntity.ok(ApiResponse.ok(cartService.addItem(currentUser, productId, quantity, size, color, false)));
     }
 
     @PutMapping("/cart/update/{id}")
@@ -138,7 +143,7 @@ public class ClientEcommerceControll {
         User currentUser = userResolverHelper.resolveCurrentUser(request);
         if (currentUser == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Yêu cầu đăng nhập"));
-        return ResponseEntity.ok(ApiResponse.ok(cartService.addItem(currentUser, productId, 1, true)));
+        return ResponseEntity.ok(ApiResponse.ok(cartService.addItem(currentUser, productId, 1, null, null, true)));
     }
 
     // ========== ĐƠN HÀNG CLIENT ==========
