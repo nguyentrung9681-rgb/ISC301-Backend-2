@@ -146,6 +146,15 @@ public class OrderService {
         order.setStatus(formattedStatus);
         Order savedOrder = orderRepository.save(order);
 
+        // Nếu đơn hàng chuyển sang DELIVERED, tự động cập nhật trạng thái thanh toán sang PAID
+        if (formattedStatus.equals("DELIVERED")) {
+            try {
+                paymentService.confirmPaymentForDeliveredOrder(orderId);
+            } catch (Exception e) {
+                System.err.println("Lỗi tự động xác nhận thanh toán cho đơn hàng #" + orderId + ": " + e.getMessage());
+            }
+        }
+
         // Gửi email cập nhật trạng thái nếu chuyển sang SHIPPING hoặc DELIVERED
         if (!oldStatus.equalsIgnoreCase(formattedStatus) &&
             (formattedStatus.equals("SHIPPING") || formattedStatus.equals("DELIVERED"))) {

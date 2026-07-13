@@ -71,6 +71,18 @@ public class PaymentService {
         });
     }
 
+    // Xác nhận thanh toán khi đơn hàng được giao thành công
+    public void confirmPaymentForDeliveredOrder(Long orderId) {
+        paymentRepository.findByOrderId(orderId).ifPresent(payment -> {
+            if (!"PAID".equals(payment.getStatus())) {
+                payment.setStatus("PAID");
+                payment.setUpdatedAt(LocalDateTime.now());
+                Payment savedPayment = paymentRepository.save(payment);
+                triggerOrderInvoiceEmail(savedPayment.getOrder());
+            }
+        });
+    }
+
     // Xem thông tin thanh toán theo đơn hàng
     @Transactional
     public Payment getPaymentByOrder(Long orderId) {
