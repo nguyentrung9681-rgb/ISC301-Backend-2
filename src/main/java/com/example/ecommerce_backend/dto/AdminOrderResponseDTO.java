@@ -21,7 +21,8 @@ public record AdminOrderResponseDTO(
             Long productId,
             String productName,
             Integer quantity,
-            BigDecimal price
+            BigDecimal price,
+            String imageUrl
     ) {
     }
 }

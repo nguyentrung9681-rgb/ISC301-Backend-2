@@ -183,7 +183,8 @@ public class OrderService {
                                         item.getProduct() != null ? item.getProduct().getId() : null,
                                         item.getProduct() != null ? item.getProduct().getProductName() : "San pham",
                                         item.getQuantity(),
-                                        item.getPrice()))
+                                        item.getPrice(),
+                                        item.getProduct() != null ? item.getProduct().getImageUrl() : null))
                                 .toList()))
                 .toList();
     }
