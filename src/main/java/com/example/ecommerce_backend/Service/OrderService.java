@@ -33,13 +33,14 @@ public class OrderService {
     private EmailService emailService;
 
     @Transactional
-    public Order createOrder(User user, String address, String phone, String paymentMethod) {
+    public Order createOrder(User user, String receiverName, String address, String phone, String paymentMethod) {
         List<CartItem> cartItems = cartItemRepository.findByUserIdAndIsWishlist(user.getId(), false);
         if (cartItems.isEmpty())
             throw new RuntimeException("Giỏ hàng của bạn đang trống!");
 
         Order order = new Order();
         order.setUser(user);
+        order.setReceiverName(receiverName);
         order.setOrderDate(LocalDateTime.now());
         order.setShippingAddress(address);
         order.setPhoneNumber(phone);
@@ -168,7 +169,7 @@ public class OrderService {
         return orderRepository.findAllWithDetails().stream()
                 .map(order -> new AdminOrderResponseDTO(
                         order.getId(),
-                        order.getUser() != null ? order.getUser().getFullName() : "Khach hang",
+                        order.getReceiverName() != null ? order.getReceiverName() : (order.getUser() != null ? order.getUser().getFullName() : "Khach hang"),
                         order.getPhoneNumber(),
                         order.getShippingAddress(),
                         order.getTotalAmount(),
@@ -193,7 +194,7 @@ public class OrderService {
 
     // VOUCHER
     @Transactional
-    public Order createOrderWithVoucher(User user, String address, String phone, String paymentMethod,
+    public Order createOrderWithVoucher(User user, String receiverName, String address, String phone, String paymentMethod,
             String voucherCode) {
         // 1. Kiểm tra và lấy thông tin Voucher hợp lệ (tái dùng logic trong
         // VoucherService)
@@ -206,6 +207,7 @@ public class OrderService {
 
         Order order = new Order();
         order.setUser(user);
+        order.setReceiverName(receiverName);
         order.setOrderDate(LocalDateTime.now());
         order.setShippingAddress(address);
         order.setPhoneNumber(phone);

@@ -150,6 +150,7 @@ public class ClientEcommerceControll {
 
     @PostMapping("/order/checkout")
     public ResponseEntity<ApiResponse<?>> checkout(
+            @RequestParam(required = false) String receiverName,
             @RequestParam(required = false) String address,
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) Long addressId,
@@ -161,6 +162,7 @@ public class ClientEcommerceControll {
 
         String finalAddress = address;
         String finalPhone = phone;
+        String finalReceiverName = receiverName;
 
         if (addressId != null) {
             UserAddress userAddress = userAddressRepository.findById(addressId)
@@ -171,6 +173,7 @@ public class ClientEcommerceControll {
             }
             finalAddress = userAddress.getFullName() + ", " + userAddress.getAddressDetail();
             finalPhone = userAddress.getPhone();
+            finalReceiverName = userAddress.getFullName();
         } else {
             if (finalAddress == null || finalAddress.trim().isEmpty() || finalPhone == null || finalPhone.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -178,7 +181,11 @@ public class ClientEcommerceControll {
             }
         }
 
-        return ResponseEntity.ok(ApiResponse.ok(orderService.createOrder(currentUser, finalAddress, finalPhone, paymentMethod)));
+        if (finalReceiverName == null || finalReceiverName.trim().isEmpty()) {
+            finalReceiverName = currentUser.getFullName();
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok(orderService.createOrder(currentUser, finalReceiverName, finalAddress, finalPhone, paymentMethod)));
     }
 
     @PostMapping("/order/cancel/{id}")
@@ -243,6 +250,7 @@ public class ClientEcommerceControll {
 
     @PostMapping("/order/checkout-with-voucher")
     public ResponseEntity<ApiResponse<?>> checkoutWithVoucher(
+            @RequestParam(required = false) String receiverName,
             @RequestParam(required = false) String address,
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) Long addressId,
@@ -255,6 +263,7 @@ public class ClientEcommerceControll {
 
         String finalAddress = address;
         String finalPhone = phone;
+        String finalReceiverName = receiverName;
 
         if (addressId != null) {
             UserAddress userAddress = userAddressRepository.findById(addressId)
@@ -265,6 +274,7 @@ public class ClientEcommerceControll {
             }
             finalAddress = userAddress.getFullName() + ", " + userAddress.getAddressDetail();
             finalPhone = userAddress.getPhone();
+            finalReceiverName = userAddress.getFullName();
         } else {
             if (finalAddress == null || finalAddress.trim().isEmpty() || finalPhone == null || finalPhone.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -272,6 +282,10 @@ public class ClientEcommerceControll {
             }
         }
 
-        return ResponseEntity.ok(ApiResponse.ok(orderService.createOrderWithVoucher(currentUser, finalAddress, finalPhone, paymentMethod, voucherCode)));
+        if (finalReceiverName == null || finalReceiverName.trim().isEmpty()) {
+            finalReceiverName = currentUser.getFullName();
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok(orderService.createOrderWithVoucher(currentUser, finalReceiverName, finalAddress, finalPhone, paymentMethod, voucherCode)));
     }
 }

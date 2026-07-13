@@ -158,7 +158,7 @@ public class EmailService {
 
             // Thông tin nhận hàng
             htmlContent.append("<h3>📍 Thông tin giao hàng</h3>");
-            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getUser().getFullName()).append("</p>");
+            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getReceiverName() != null ? order.getReceiverName() : order.getUser().getFullName()).append("</p>");
             htmlContent.append("<p><strong>Số điện thoại:</strong> ").append(order.getPhoneNumber()).append("</p>");
             htmlContent.append("<p><strong>Địa chỉ:</strong> ").append(order.getShippingAddress()).append("</p>");
             htmlContent.append("<p><strong>Phương thức thanh toán:</strong> ").append(order.getPaymentMethod()).append("</p>");
@@ -197,7 +197,7 @@ public class EmailService {
 
             // Thông tin giao hàng
             htmlContent.append("<h3>📍 Thông tin giao hàng</h3>");
-            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getUser().getFullName()).append("</p>");
+            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getReceiverName() != null ? order.getReceiverName() : order.getUser().getFullName()).append("</p>");
             htmlContent.append("<p><strong>Số điện thoại:</strong> ").append(order.getPhoneNumber()).append("</p>");
             htmlContent.append("<p><strong>Địa chỉ giao:</strong> ").append(order.getShippingAddress()).append("</p>");
             htmlContent.append("<p><strong>Phương thức thanh toán:</strong> ").append(order.getPaymentMethod()).append("</p>");
@@ -241,7 +241,7 @@ public class EmailService {
 
             // Thông tin giao hàng
             htmlContent.append("<h3>📍 Chi tiết giao hàng</h3>");
-            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getUser().getFullName()).append("</p>");
+            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getReceiverName() != null ? order.getReceiverName() : order.getUser().getFullName()).append("</p>");
             htmlContent.append("<p><strong>Số điện thoại:</strong> ").append(order.getPhoneNumber()).append("</p>");
             htmlContent.append("<p><strong>Địa chỉ giao:</strong> ").append(order.getShippingAddress()).append("</p>");
             htmlContent.append("<p><strong>Trạng thái hiện tại:</strong> <span style='background-color: ").append(badgeColor).append("; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: bold;'>").append(statusVi).append("</span></p>");
@@ -275,7 +275,7 @@ public class EmailService {
 
             // Thông tin giao hàng
             htmlContent.append("<h3>📍 Chi tiết đơn hàng bị hủy</h3>");
-            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getUser().getFullName()).append("</p>");
+            htmlContent.append("<p><strong>Người nhận:</strong> ").append(order.getReceiverName() != null ? order.getReceiverName() : order.getUser().getFullName()).append("</p>");
             htmlContent.append("<p><strong>Trạng thái:</strong> <span style='background-color: #e74c3c; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: bold;'>ĐÃ HỦY (CANCELLED)</span></p>");
 
             // Chi tiết sản phẩm

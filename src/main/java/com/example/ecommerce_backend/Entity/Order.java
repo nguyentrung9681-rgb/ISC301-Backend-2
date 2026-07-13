@@ -31,6 +31,9 @@ public class Order {
     private String shippingAddress;
     private String phoneNumber;
 
+    @Column(name = "receiver_name", length = 255)
+    private String receiverName;
+
     @Column(name = "payment_method", length = 255)
     private String paymentMethod;
 
