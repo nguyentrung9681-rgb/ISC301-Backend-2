@@ -33,8 +33,19 @@ public class OrderService {
     private EmailService emailService;
 
     @Transactional
-    public Order createOrder(User user, String receiverName, String address, String phone, String paymentMethod) {
-        List<CartItem> cartItems = cartItemRepository.findByUserIdAndIsWishlist(user.getId(), false);
+    public Order createOrder(User user, String receiverName, String address, String phone, String paymentMethod, List<Long> cartItemIds) {
+        List<CartItem> cartItems;
+        if (cartItemIds != null && !cartItemIds.isEmpty()) {
+            cartItems = cartItemRepository.findAllById(cartItemIds);
+            for (CartItem ci : cartItems) {
+                if (!ci.getUser().getId().equals(user.getId()) || ci.isWishlist()) {
+                    throw new RuntimeException("Sản phẩm không hợp lệ trong giỏ hàng!");
+                }
+            }
+        } else {
+            cartItems = cartItemRepository.findByUserIdAndIsWishlist(user.getId(), false);
+        }
+
         if (cartItems.isEmpty())
             throw new RuntimeException("Giỏ hàng của bạn đang trống!");
 
@@ -76,8 +87,13 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
         paymentService.createPayment(savedOrder);
-        // Xóa sạch giỏ hàng sau khi checkout thành công
-        cartItemRepository.deleteByUserIdAndIsWishlist(user.getId(), false);
+        
+        // Xóa các sản phẩm đã đặt mua khỏi giỏ hàng
+        if (cartItemIds != null && !cartItemIds.isEmpty()) {
+            cartItemRepository.deleteAll(cartItems);
+        } else {
+            cartItemRepository.deleteByUserIdAndIsWishlist(user.getId(), false);
+        }
 
         // Gửi email xác nhận đơn hàng mới (PENDING)
         try {
@@ -205,13 +221,24 @@ public class OrderService {
     // VOUCHER
     @Transactional
     public Order createOrderWithVoucher(User user, String receiverName, String address, String phone, String paymentMethod,
-            String voucherCode) {
+            String voucherCode, List<Long> cartItemIds) {
         // 1. Kiểm tra và lấy thông tin Voucher hợp lệ (tái dùng logic trong
         // VoucherService)
         Voucher voucher = voucherService.validateVoucher(voucherCode);
 
         // 2. Gom sản phẩm từ giỏ hàng (tương tự hàm checkout cũ)
-        List<CartItem> cartItems = cartItemRepository.findByUserIdAndIsWishlist(user.getId(), false);
+        List<CartItem> cartItems;
+        if (cartItemIds != null && !cartItemIds.isEmpty()) {
+            cartItems = cartItemRepository.findAllById(cartItemIds);
+            for (CartItem ci : cartItems) {
+                if (!ci.getUser().getId().equals(user.getId()) || ci.isWishlist()) {
+                    throw new RuntimeException("Sản phẩm không hợp lệ trong giỏ hàng!");
+                }
+            }
+        } else {
+            cartItems = cartItemRepository.findByUserIdAndIsWishlist(user.getId(), false);
+        }
+
         if (cartItems.isEmpty())
             throw new RuntimeException("Giỏ hàng rỗng!");
 
@@ -263,7 +290,12 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         paymentService.createPayment(savedOrder); // Tự động tạo bản ghi thanh toán kèm theo
 
-        cartItemRepository.deleteByUserIdAndIsWishlist(user.getId(), false);
+        // Xóa các sản phẩm đã đặt mua khỏi giỏ hàng
+        if (cartItemIds != null && !cartItemIds.isEmpty()) {
+            cartItemRepository.deleteAll(cartItems);
+        } else {
+            cartItemRepository.deleteByUserIdAndIsWishlist(user.getId(), false);
+        }
 
         // Gửi email xác nhận đơn hàng mới (PENDING)
         try {

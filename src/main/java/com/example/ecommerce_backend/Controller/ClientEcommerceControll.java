@@ -155,6 +155,7 @@ public class ClientEcommerceControll {
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) Long addressId,
             @RequestParam String paymentMethod,
+            @RequestParam(required = false) List<Long> cartItemIds,
             HttpServletRequest request) {
         User currentUser = userResolverHelper.resolveCurrentUser(request);
         if (currentUser == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -185,7 +186,7 @@ public class ClientEcommerceControll {
             finalReceiverName = currentUser.getFullName();
         }
 
-        return ResponseEntity.ok(ApiResponse.ok(orderService.createOrder(currentUser, finalReceiverName, finalAddress, finalPhone, paymentMethod)));
+        return ResponseEntity.ok(ApiResponse.ok(orderService.createOrder(currentUser, finalReceiverName, finalAddress, finalPhone, paymentMethod, cartItemIds)));
     }
 
     @PostMapping("/order/cancel/{id}")
@@ -256,6 +257,7 @@ public class ClientEcommerceControll {
             @RequestParam(required = false) Long addressId,
             @RequestParam String paymentMethod,
             @RequestParam String voucherCode,
+            @RequestParam(required = false) List<Long> cartItemIds,
             HttpServletRequest request) {
         User currentUser = userResolverHelper.resolveCurrentUser(request);
         if (currentUser == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -286,6 +288,6 @@ public class ClientEcommerceControll {
             finalReceiverName = currentUser.getFullName();
         }
 
-        return ResponseEntity.ok(ApiResponse.ok(orderService.createOrderWithVoucher(currentUser, finalReceiverName, finalAddress, finalPhone, paymentMethod, voucherCode)));
+        return ResponseEntity.ok(ApiResponse.ok(orderService.createOrderWithVoucher(currentUser, finalReceiverName, finalAddress, finalPhone, paymentMethod, voucherCode, cartItemIds)));
     }
 }
