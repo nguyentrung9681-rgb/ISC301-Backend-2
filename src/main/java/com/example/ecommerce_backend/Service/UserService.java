@@ -175,7 +175,7 @@ public class UserService {
 
     // View user: Manager xem toàn bộ khách hàng và nhân viên
     public List<UserResponseDTO> getAllBuyers() {
-        return userRepository.findByRoleIn(List.of(Role.BUYER, Role.STAFF))
+        return userRepository.findByRoleIn(List.of(Role.BUYER, Role.STAFF, Role.MANAGER))
                 .stream()
                 .map(UserResponseDTO::new)
                 .toList();
@@ -187,7 +187,7 @@ public class UserService {
             return getAllBuyers();
         }
 
-        return userRepository.searchUsersByEmailOrPhoneAndRoles(keyword.trim(), List.of(Role.BUYER, Role.STAFF))
+        return userRepository.searchUsersByEmailOrPhoneAndRoles(keyword.trim(), List.of(Role.BUYER, Role.STAFF, Role.MANAGER))
                 .stream()
                 .map(UserResponseDTO::new)
                 .toList();
