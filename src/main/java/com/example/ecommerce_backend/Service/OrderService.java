@@ -323,4 +323,11 @@ public class OrderService {
 
         return savedOrder;
     }
+
+    @Transactional(readOnly = true)
+    public Order getOrderPublicTracking(Long id) {
+        return orderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng mã #" + id));
+    }
 }
+

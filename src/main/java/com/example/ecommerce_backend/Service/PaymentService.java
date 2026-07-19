@@ -186,24 +186,32 @@ public class PaymentService {
         }
     }
 
-    // Hàm MOI: nội bộ giúp sinh mã QR và bắn Mail (Tránh viết lặp code)
+    // Hàm nội bộ giúp sinh mã QR dẫn tới URL tra cứu và bắn Mail
     private void triggerOrderInvoiceEmail(Order order) {
         try {
-            // Chuỗi text mã hóa vào QR (Ví dụ: Dẫn đến link tra cứu hoặc thông tin nhanh của đơn)
-            String qrData = "JustLife-Order-ID: " + order.getId()
-                    + " | Customer: " + order.getUser().getFullName()
-                    + " | Total: " + order.getTotalAmount() + " VND";
+            // Lấy URL frontend từ biến môi trường hoặc mặc định localhost:3000
+            String frontendUrl = System.getenv("FRONTEND_URL");
+            if (frontendUrl == null || frontendUrl.trim().isEmpty()) {
+                frontendUrl = "http://localhost:3000";
+            }
+            if (frontendUrl.endsWith("/")) {
+                frontendUrl = frontendUrl.substring(0, frontendUrl.length() - 1);
+            }
 
-            // Tạo ảnh QR kích thước 200x200 px
-            byte[] qrImage = qrCodeService.generateQRCodeImage(qrData, 200, 200);
+            // Tạo đường link URL tra cứu đơn hàng trực tiếp khi quét QR
+            String trackingUrl = frontendUrl + "/?trackOrder=" + order.getId();
+
+            // Tạo ảnh QR kích thước 220x220 px chứa URL tra cứu
+            byte[] qrImage = qrCodeService.generateQRCodeImage(trackingUrl, 220, 220);
 
             // Gửi email hóa đơn trực tiếp cho khách hàng
             emailService.sendOrderConfirmationEmail(order.getUser().getEmail(), order.getId(), qrImage);
         } catch (Exception e) {
-            // Log warning or print stack trace instead of rolling back the entire transaction!
+            // Log warning or print stack trace instead of rolling back transaction
             System.err.println("Lỗi khi gửi email hóa đơn cho đơn hàng #" + order.getId() + ": " + e.getMessage());
             e.printStackTrace();
         }
     }
+
 
 }

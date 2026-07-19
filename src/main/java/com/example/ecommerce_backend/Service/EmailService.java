@@ -167,13 +167,17 @@ public class EmailService {
             htmlContent.append("<h3>🛍️ Chi tiết sản phẩm</h3>");
             htmlContent.append(buildOrderItemsTable(order));
 
-            // Nhúng thẻ hình ảnh QR bằng mã CID (Content Identifier)
-            htmlContent.append("<div style='text-align: center; margin-top: 30px; padding: 15px; background-color: #f9f9f9;'>");
-            htmlContent.append("<p style='margin-bottom: 5px; font-weight: bold;'>MÃ QR TRA CỨU ĐƠN HÀNG VẬN CHUYỂN</p>");
-            htmlContent.append("<img src='cid:qrCodeImageInline' width='180' height='180' style='border: 1px solid #ccc;'/>");
-            htmlContent.append("<p style='font-size: 12px; color: #7f8c8d; margin-top: 5px;'>Quét mã để kiểm tra thông tin hoặc check-in nhận hàng</p>");
+            // Nhúng thẻ hình ảnh QR bằng mã CID (Content Identifier) trong khung thiết kế chuyên nghiệp
+            htmlContent.append("<div style='text-align: center; margin-top: 30px; padding: 24px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>");
+            htmlContent.append("<div style='display: inline-block; padding: 6px 16px; background-color: #e3f2fd; color: #1565c0; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 12px;'>📱 TRA CỨU ĐƠN HÀNG THÔNG MINH</div>");
+            htmlContent.append("<h4 style='margin: 0 0 12px 0; color: #1e293b; font-size: 16px;'>QUÉT MÃ QR ĐỂ THEO DÕI HÀNH TRÌNH</h4>");
+            htmlContent.append("<div style='display: inline-block; padding: 12px; background: #ffffff; border-radius: 12px; border: 2px dashed #cbd5e1;'>");
+            htmlContent.append("<img src='cid:qrCodeImageInline' width='190' height='190' style='display: block; border-radius: 8px;' alt='Mã QR Tra cứu'/>");
+            htmlContent.append("</div>");
+            htmlContent.append("<p style='font-size: 13px; color: #475569; margin-top: 12px; font-weight: 500;'>Dùng <strong>Camera điện thoại</strong> hoặc <strong>Zalo</strong> quét mã để mở ngay trang Web Tra cứu & Hóa đơn trực tuyến.</p>");
             htmlContent.append("</div>");
             htmlContent.append("</div>");
+
 
             sendSendGridEmail(toEmail, "[JustLife] Hóa đơn thanh toán thành công - Đơn hàng #" + order.getId(), htmlContent.toString(), qrCodeImage);
         } catch (Exception e) {

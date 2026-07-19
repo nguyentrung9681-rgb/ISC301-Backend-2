@@ -216,6 +216,12 @@ public class ClientEcommerceControll {
         return ResponseEntity.ok(ApiResponse.ok(orderService.getClientOrderHistory(currentUser.getId())));
     }
 
+    @GetMapping("/order/public-tracking/{id}")
+    public ResponseEntity<ApiResponse<Order>> getPublicOrderTracking(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(orderService.getOrderPublicTracking(id)));
+    }
+
+
     // ========== THANH TOÁN ==========
 
     @GetMapping("/payment/{orderId}")
