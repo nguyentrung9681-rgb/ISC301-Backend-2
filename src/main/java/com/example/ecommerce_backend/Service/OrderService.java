@@ -171,15 +171,15 @@ public class OrderService {
             }
         }
 
-        // Gửi email cập nhật trạng thái nếu chuyển sang SHIPPING hoặc DELIVERED
-        if (!oldStatus.equalsIgnoreCase(formattedStatus) &&
-            (formattedStatus.equals("SHIPPING") || formattedStatus.equals("DELIVERED"))) {
+        // Gửi email cập nhật trạng thái tự động cho bất kỳ sự thay đổi tiến độ đơn hàng
+        if (!oldStatus.equalsIgnoreCase(formattedStatus)) {
             try {
                 emailService.sendOrderStatusUpdateEmail(savedOrder.getUser().getEmail(), savedOrder.getId(), formattedStatus);
             } catch (Exception e) {
                 System.err.println("Lỗi gửi email cập nhật trạng thái đơn hàng: " + e.getMessage());
             }
         }
+
 
         return savedOrder;
     }

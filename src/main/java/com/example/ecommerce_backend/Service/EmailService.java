@@ -186,12 +186,25 @@ public class EmailService {
         }
     }
 
+    private String getFrontendTrackingUrl(Long orderId) {
+        String frontendUrl = System.getenv("FRONTEND_URL");
+        if (frontendUrl == null || frontendUrl.trim().isEmpty()) {
+            frontendUrl = "https://isc-301.vercel.app";
+        }
+        if (frontendUrl.endsWith("/")) {
+            frontendUrl = frontendUrl.substring(0, frontendUrl.length() - 1);
+        }
+        return frontendUrl + "/?trackOrder=" + orderId;
+    }
+
     // 🌟 Gửi Email xác nhận đơn hàng mới (PENDING)
     @Transactional(readOnly = true)
     public void sendOrderPendingEmail(String toEmail, Long orderId) {
         try {
             Order order = orderRepository.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
+
+            String trackingUrl = getFrontendTrackingUrl(order.getId());
 
             StringBuilder htmlContent = new StringBuilder();
             htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
@@ -211,8 +224,12 @@ public class EmailService {
             htmlContent.append("<h3>🛍️ Chi tiết sản phẩm</h3>");
             htmlContent.append(buildOrderItemsTable(order));
 
+            htmlContent.append("<div style='text-align: center; margin-top: 25px; margin-bottom: 15px;'>");
+            htmlContent.append("<a href='").append(trackingUrl).append("' style='background-color: #e65100; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;'>🚚 Tra Cứu Trực Tuyến Hành Trình Đơn Hàng #").append(order.getId()).append("</a>");
+            htmlContent.append("</div>");
+
             htmlContent.append("<hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'>");
-            htmlContent.append("<p style='font-size: 13px; color: #7f8c8d; text-align: center;'>Chúng tôi sẽ thông báo cho bạn khi đơn hàng được bàn giao cho đối tác vận chuyển.</p>");
+            htmlContent.append("<p style='font-size: 13px; color: #7f8c8d; text-align: center;'>Chúng tôi sẽ thông báo cho bạn khi đơn hàng được chuyển trạng thái tiếp theo.</p>");
             htmlContent.append("</div>");
 
             sendSendGridEmail(toEmail, "[JustLife] Xác nhận đơn hàng mới - Đơn hàng #" + order.getId(), htmlContent.toString(), null);
@@ -222,25 +239,42 @@ public class EmailService {
         }
     }
 
-    // 🌟 Gửi Email thông báo cập nhật trạng thái giao hàng (SHIPPING hoặc DELIVERED)
+    // 🌟 Gửi Email thông báo cập nhật trạng thái giao hàng
     @Transactional(readOnly = true)
     public void sendOrderStatusUpdateEmail(String toEmail, Long orderId, String newStatus) {
         try {
             Order order = orderRepository.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + orderId));
 
-            String statusVi = newStatus.equalsIgnoreCase("SHIPPING") ? "ĐANG GIAO HÀNG" : "ĐÃ GIAO THÀNH CÔNG";
-            String badgeColor = newStatus.equalsIgnoreCase("SHIPPING") ? "#2980b9" : "#27ae60";
+            String statusVi;
+            String badgeColor;
+            if ("SHIPPING".equalsIgnoreCase(newStatus)) {
+                statusVi = "ĐANG GIAO HÀNG";
+                badgeColor = "#2980b9";
+            } else if ("DELIVERED".equalsIgnoreCase(newStatus)) {
+                statusVi = "ĐÃ GIAO THÀNH CÔNG";
+                badgeColor = "#27ae60";
+            } else if ("CANCELLED".equalsIgnoreCase(newStatus)) {
+                statusVi = "ĐÃ HỦY ĐƠN";
+                badgeColor = "#e74c3c";
+            } else {
+                statusVi = newStatus.toUpperCase();
+                badgeColor = "#f39c12";
+            }
+
+            String trackingUrl = getFrontendTrackingUrl(order.getId());
 
             StringBuilder htmlContent = new StringBuilder();
             htmlContent.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0;'>");
-            htmlContent.append("<h2 style='color: #2c3e50; text-align: center;'>CẬP NHẬT HÀNH TRÌNH ĐƠN HÀNG</h2>");
+            htmlContent.append("<h2 style='color: #2c3e50; text-align: center;'>CẬP NHẬT HÀNH TRÌNH ĐƠN HÀNG #").append(order.getId()).append("</h2>");
             htmlContent.append("<p>Xin chào <strong>").append(order.getUser().getFullName()).append("</strong>,</p>");
             
-            if (newStatus.equalsIgnoreCase("SHIPPING")) {
+            if ("SHIPPING".equalsIgnoreCase(newStatus)) {
                 htmlContent.append("<p>Đơn hàng của bạn đã được đóng gói và bàn giao cho đối tác vận chuyển để giao tới bạn.</p>");
-            } else {
+            } else if ("DELIVERED".equalsIgnoreCase(newStatus)) {
                 htmlContent.append("<p>Tuyệt vời! Đơn hàng của bạn đã được giao thành công. Cảm ơn bạn đã lựa chọn JustLife!</p>");
+            } else {
+                htmlContent.append("<p>Trạng thái đơn hàng của bạn đã được cập nhật sang: <strong>").append(statusVi).append("</strong>.</p>");
             }
 
             // Thông tin giao hàng
@@ -254,6 +288,10 @@ public class EmailService {
             htmlContent.append("<h3>🛍️ Chi tiết sản phẩm</h3>");
             htmlContent.append(buildOrderItemsTable(order));
 
+            htmlContent.append("<div style='text-align: center; margin-top: 25px; margin-bottom: 15px;'>");
+            htmlContent.append("<a href='").append(trackingUrl).append("' style='background-color: #e65100; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;'>🚚 Xem Trực Tuyến Tiến Độ Đơn Hàng #").append(order.getId()).append("</a>");
+            htmlContent.append("</div>");
+
             htmlContent.append("</div>");
 
             sendSendGridEmail(toEmail, "[JustLife] Cập nhật trạng thái đơn hàng #" + order.getId() + " - " + statusVi, htmlContent.toString(), null);
@@ -262,6 +300,7 @@ public class EmailService {
             e.printStackTrace();
         }
     }
+
 
     // 🌟 Gửi Email thông báo hủy đơn hàng (CANCELLED)
     @Transactional(readOnly = true)
