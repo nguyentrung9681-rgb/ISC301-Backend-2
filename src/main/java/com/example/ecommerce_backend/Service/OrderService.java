@@ -184,6 +184,23 @@ public class OrderService {
         return savedOrder;
     }
 
+    // 3b. Khách hàng tạo yêu cầu đổi size trong 7 ngày (chỉ áp dụng cho đơn DELIVERED)
+    public Order requestReturnOrder(Long orderId, User user, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Đơn hàng không tồn tại"));
+
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Bạn không có quyền gửi yêu cầu đổi size cho đơn hàng này!");
+        }
+
+        if (!"DELIVERED".equalsIgnoreCase(order.getStatus())) {
+            throw new RuntimeException("Chỉ đơn hàng đã giao thành công (DELIVERED) mới được yêu cầu đổi size!");
+        }
+
+        order.setStatus("RETURN_REQUESTED");
+        return orderRepository.save(order);
+    }
+
     // 4. Xem danh sách đơn hàng
     public List<Order> getAllOrders() {
         return orderRepository.findAll();

@@ -197,6 +197,17 @@ public class ClientEcommerceControll {
         return ResponseEntity.ok(ApiResponse.ok(orderService.cancelOrder(id, currentUser, false)));
     }
 
+    @PostMapping({"/order/return-request/{id}", "/order/return_request/{id}"})
+    public ResponseEntity<ApiResponse<?>> requestReturnOrder(
+            @PathVariable Long id,
+            @RequestParam(required = false) String reason,
+            HttpServletRequest request) {
+        User currentUser = userResolverHelper.resolveCurrentUser(request);
+        if (currentUser == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Yêu cầu đăng nhập"));
+        return ResponseEntity.ok(ApiResponse.ok(orderService.requestReturnOrder(id, currentUser, reason)));
+    }
+
     @GetMapping("/order/history")
     public ResponseEntity<ApiResponse<?>> getHistory(HttpServletRequest request) {
         User currentUser = userResolverHelper.resolveCurrentUser(request);

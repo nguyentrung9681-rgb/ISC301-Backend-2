@@ -38,7 +38,7 @@ public class Order {
     private String paymentMethod;
 
     @Column(name = "status", length = 255)
-    private String status; //PENDING -> SHIPPING -> DELIVERED/ CANCELLED
+    private String status; // PENDING -> SHIPPING -> DELIVERED / CANCELLED | RETURN_REQUESTED -> RETURN_APPROVED -> RETURNED
 
     @JsonManagedReference
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
